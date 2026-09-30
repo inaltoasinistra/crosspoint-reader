@@ -178,6 +178,13 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
 
   enum TILT_PAGE_TURN { TILT_OFF = 0, TILT_NORMAL = 1, TILT_NVERTED = 2, TILT_PAGE_TURN_COUNT };
 
+  enum TILT_DETECTION {
+    TILT_DETECT_RATE = 0,
+    TILT_DETECT_ACCEL = 1,
+    TILT_DETECT_ACCEL_RETURN = 2,
+    TILT_DETECTION_COUNT
+  };
+
   enum TOUCH_READER_CONTROLS {
     TOUCH_READER_OFF = 0,
     TOUCH_READER_ON = 1,
@@ -303,6 +310,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t imageRendering = IMAGES_DISPLAY;
   // Tilt-based page turning (X3 only — requires QMI8658 IMU)
   uint8_t tiltPageTurn = TILT_OFF;
+  // How a tilt gesture is recognized: rate only, rate + accelerometer gate, or flick-and-return
+  uint8_t tiltDetection = TILT_DETECT_RATE;
   // Touch screen reader zones/gestures on boards with a touch controller.
   uint8_t touchReaderControls = TOUCH_READER_SWIPE;
   // Reader menu open gesture (SHOW_READER_MENU: off / center tap / bottom-edge

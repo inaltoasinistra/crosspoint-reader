@@ -599,6 +599,12 @@ Auto Page Turn automatically advances pages at a set interval, useful for hands-
 
 On the **Xteink X3**, the gyroscope can be used to turn pages by tilting the device. This feature is available in the Controls settings.
 
+**Tilt Detection** chooses how a tilt is recognized:
+- **Rate**: any quick rotation turns the page.
+- **Accel filter**: ignores rotations while the device is also being moved (picked up, carried, bumped).
+- **Flick & return**: like Accel filter, but the page turns only after you flick the device and bring it back to
+  the reading position.
+
 ### Footnote Navigation
 
 When reading an EPUB that contains footnotes, you can navigate to the footnote text by selecting the footnote reference in the book. From the footnote, you can return to your original reading position.

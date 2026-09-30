@@ -2,15 +2,29 @@
 
 #include <Logging.h>
 
+#include <cmath>
+
 HalTiltSensor halTiltSensor;  // Singleton instance
 
-bool HalTiltSensor::readGyro(float& gx, float& gy, float& gz) const {
+bool HalTiltSensor::readSample(float& gx, float& gy, float& gz, float& accelG) const {
   Imu::Sample sample;
   if (!_sdkImu.read(sample)) return false;
   gx = sample.gx;
   gy = sample.gy;
   gz = sample.gz;
+  accelG = sqrtf(sample.ax * sample.ax + sample.ay * sample.ay + sample.az * sample.az);
   return true;
+}
+
+TiltDetectionMode HalTiltSensor::toDetectionMode(const uint8_t detection) {
+  switch (detection) {
+    case CrossPointTiltDetection::ACCEL:
+      return TiltDetectionMode::ACCEL;
+    case CrossPointTiltDetection::ACCEL_RETURN:
+      return TiltDetectionMode::ACCEL_RETURN;
+    default:
+      return TiltDetectionMode::RATE;
+  }
 }
 
 void HalTiltSensor::begin() {
@@ -40,7 +54,7 @@ bool HalTiltSensor::wake() {
   }
 
   _lastPollMs = millis();
-  _lastTiltMs = millis();
+  _gestureDetector.reset(millis());
   _wakeMs = millis();
   _isAwake = true;
   return true;
@@ -57,12 +71,13 @@ bool HalTiltSensor::deepSleep() {
   }
 
   clearPendingEvents();
-  _inTilt = false;
+  _gestureDetector.reset(millis());
   _isAwake = false;
   return true;
 }
 
-void HalTiltSensor::update(const uint8_t mode, const uint8_t orientation, const bool inReader) {
+void HalTiltSensor::update(const uint8_t mode, const uint8_t detection, const uint8_t orientation,
+                           const bool inReader) {
   if (!_available) {
     return;
   }
@@ -92,8 +107,8 @@ void HalTiltSensor::update(const uint8_t mode, const uint8_t orientation, const 
   }
   _lastPollMs = now;
 
-  float gx, gy, gz;
-  if (!readGyro(gx, gy, gz)) {
+  float gx, gy, gz, accelG;
+  if (!readSample(gx, gy, gz, accelG)) {
     return;
   }
 
@@ -118,28 +133,23 @@ void HalTiltSensor::update(const uint8_t mode, const uint8_t orientation, const 
       break;
   }
 
-  if (_inTilt) {
-    // Wait for device to return to neutral before allowing next trigger
-    if (fabsf(tiltAxis) < NEUTRAL_RATE_DPS) {
-      _inTilt = false;
+  // A half-armed gesture from the previous mode must not fire under the new one.
+  if (detection != _detection) {
+    _detection = detection;
+    _gestureDetector.reset(now);
+  }
+
+  const TiltResult result = _gestureDetector.update(toDetectionMode(detection), {tiltAxis, accelG, now});
+  if (result.activity) {
+    _hadActivity = true;
+  }
+  if (result.fired) {
+    if (result.forward) {
+      _tiltForwardEvent = true;
+    } else {
+      _tiltBackEvent = true;
     }
-  } else {
-    // Check for new tilt gesture (with cooldown)
-    if ((now - _lastTiltMs) >= COOLDOWN_MS) {
-      if (tiltAxis > RATE_THRESHOLD_DPS) {
-        _tiltForwardEvent = true;
-        _hadActivity = true;
-        _inTilt = true;
-        _lastTiltMs = now;
-        LOG_INF("GYR", "Forward Trigger=(%.1f) dps", tiltAxis);
-      } else if (tiltAxis < -RATE_THRESHOLD_DPS) {
-        _tiltBackEvent = true;
-        _hadActivity = true;
-        _inTilt = true;
-        _lastTiltMs = now;
-        LOG_INF("GYR", "Backward Trigger=(%.1f) dps", tiltAxis);
-      }
-    }
+    LOG_INF("GYR", "%s Trigger=(%.1f) dps accel=%.2f g", result.forward ? "Forward" : "Backward", tiltAxis, accelG);
   }
 }
 
@@ -165,5 +175,4 @@ void HalTiltSensor::clearPendingEvents() {
   _tiltForwardEvent = false;
   _tiltBackEvent = false;
   _hadActivity = false;
-  // Intentionally preserve _inTilt so a held tilt doesn't retrigger on next poll
 }
