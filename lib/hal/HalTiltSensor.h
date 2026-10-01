@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <Imu.h>
 #include <TiltGestureDetector.h>
+#include <TiltSession.h>
 
 // TODO: Move enums into new header and share with CrossPointSettings.h
 namespace CrossPointOrientation {
@@ -17,6 +18,10 @@ namespace CrossPointTiltDetection {
 enum Value : uint8_t { RATE = 0, ACCEL = 1, ACCEL_RETURN = 2 };
 }
 
+namespace CrossPointTiltActivation {
+enum Value : uint8_t { ALWAYS = 0, UNTIL_SLEEP = 1 };
+}
+
 class HalTiltSensor;
 extern HalTiltSensor halTiltSensor;  // Singleton
 
@@ -26,6 +31,10 @@ class HalTiltSensor {
 
   TiltGestureDetector _gestureDetector;
   uint8_t _detection = CrossPointTiltDetection::RATE;  // Detector is reset when this changes
+
+  TiltSession _session;
+  // Session is restarted when this changes; the sentinel makes the first update() start it.
+  uint8_t _activation = 0xFF;
 
   bool _tiltForwardEvent = false;  // Consumed by wasTiltedForward()
   bool _tiltBackEvent = false;     // Consumed by wasTiltedBack()
@@ -58,8 +67,13 @@ class HalTiltSensor {
   bool isAvailable() const { return _available; }
 
   // Poll the IMU and update tilt gesture state.
-  // mode: CrossPointTiltPageTurn, detection: CrossPointTiltDetection.
-  void update(const uint8_t mode, const uint8_t detection, const uint8_t orientation, const bool inReader);
+  // mode: CrossPointTiltPageTurn, detection: CrossPointTiltDetection, activation: CrossPointTiltActivation.
+  void update(const uint8_t mode, const uint8_t detection, const uint8_t activation, const uint8_t orientation,
+              const bool inReader);
+
+  // Arm or disarm tilt for the rest of this power-on session. Returns the new state.
+  bool toggleSession();
+  bool isSessionEnabled() const { return _session.isEnabled(); }
 
   // Returns true once per tilt-forward gesture (next page direction).
   // Consumed on read — subsequent calls return false until next gesture.

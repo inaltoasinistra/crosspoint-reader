@@ -7,6 +7,7 @@
 #include <GfxRenderer.h>
 #include <HalFrontlight.h>
 #include <HalStorage.h>
+#include <HalTiltSensor.h>
 #include <I18n.h>
 #include <Logging.h>
 #include <Memory.h>
@@ -490,6 +491,9 @@ void EpubReaderActivity::loop() {
       case CrossPointSettings::LP_MENU_DICTIONARY:
         openDictionaryWordSelect();
         return;
+      case CrossPointSettings::LP_MENU_TILT:
+        toggleTiltSession();
+        break;
       case CrossPointSettings::LP_MENU_READER_MENU:
       case CrossPointSettings::LP_MENU_DISABLED:
       default:
@@ -524,6 +528,9 @@ void EpubReaderActivity::loop() {
         } else {
           openReaderMenu();
         }
+        return;
+      case CrossPointSettings::LP_MENU_TILT:
+        toggleTiltSession();
         return;
       case CrossPointSettings::LP_MENU_DISABLED:
       default:
@@ -909,10 +916,21 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
   }
 }
 
+void EpubReaderActivity::toggleTiltSession() {
+  // With tilt page turn off there is nothing to arm; the absent status bar icon already says so.
+  if (SETTINGS.tiltPageTurn == CrossPointSettings::TILT_OFF || !halTiltSensor.isAvailable()) {
+    return;
+  }
+  halTiltSensor.toggleSession();
+  // Redraw so the status bar icon reflects the new state.
+  requestUpdate();
+}
+
 unsigned long EpubReaderActivity::confirmLongPressThreshold() const {
   switch (SETTINGS.longPressMenuFunction) {
     case CrossPointSettings::LP_MENU_BOOKMARK:
     case CrossPointSettings::LP_MENU_DICTIONARY:
+    case CrossPointSettings::LP_MENU_TILT:
       return ReaderUtils::BOOKMARK_HOLD_MS;
     case CrossPointSettings::LP_MENU_KOSYNC:
       return KOREADER_STORE.hasCredentials() ? ReaderUtils::GO_HOME_MS : 0;

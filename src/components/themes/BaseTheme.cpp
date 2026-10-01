@@ -6,6 +6,7 @@
 #include <HalGPIO.h>
 #include <HalPowerManager.h>
 #include <HalStorage.h>
+#include <HalTiltSensor.h>
 #include <Logging.h>
 
 #include <algorithm>
@@ -19,6 +20,7 @@
 #include "components/UIThemeTokens.h"
 #include "components/UiAppHelpers.h"
 #include "components/icons/bookmark.h"
+#include "components/icons/tilt.h"
 #include "fontIds.h"
 
 // Internal constants
@@ -26,20 +28,27 @@ namespace {
 constexpr int homeMenuMargin = 20;
 constexpr int homeMarginTop = 30;
 constexpr int subtitleY = 738;
-constexpr int bookmarkStatusIconWidth = 16;
-constexpr int bookmarkStatusIconHeight = 14;
-constexpr int bookmarkStatusIconGap = 4;
-constexpr int bookmarkStatusIconTopCrop = 2;
+constexpr int statusIconWidth = 16;
+constexpr int statusIconHeight = 14;
+constexpr int statusIconGap = 4;
+constexpr int statusIconTopCrop = 2;
 
-void drawBookmarkStatusIcon(const GfxRenderer& renderer, const int x, const int y) {
-  constexpr int bytesPerRow = bookmarkStatusIconWidth / 8;
-  for (int row = 0; row < bookmarkStatusIconHeight; ++row) {
-    for (int col = 0; col < bookmarkStatusIconWidth; ++col) {
-      const uint8_t byte = BookmarkStatusIcon[(row + bookmarkStatusIconTopCrop) * bytesPerRow + col / 8];
+// Draws a 16x16 status-bar bitmap (BookmarkStatusIcon, TiltStatusIcon) with its top rows cropped.
+void drawStatusIcon(const GfxRenderer& renderer, const uint8_t* icon, const int x, const int y) {
+  constexpr int bytesPerRow = statusIconWidth / 8;
+  for (int row = 0; row < statusIconHeight; ++row) {
+    for (int col = 0; col < statusIconWidth; ++col) {
+      const uint8_t byte = icon[(row + statusIconTopCrop) * bytesPerRow + col / 8];
       const uint8_t mask = 1U << (7 - (col % 8));
       renderer.drawPixel(x + col, y + row, (byte & mask) != 0);
     }
   }
+}
+
+// Only "Until sleep" gets an icon: in "Always" mode tilt being live is the normal state.
+bool tiltSessionIconVisible() {
+  return SETTINGS.tiltActivation == CrossPointSettings::TILT_UNTIL_SLEEP &&
+         SETTINGS.tiltPageTurn != CrossPointSettings::TILT_OFF && halTiltSensor.isSessionEnabled();
 }
 
 }  // namespace
@@ -826,11 +835,18 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
 
   // Draw Bookmark
   if (showStatusBarTextLane && isPageBookmarked) {
-    const int bookmarkGap = leftClusterWidth > 0 ? bookmarkStatusIconGap : 0;
+    const int bookmarkGap = leftClusterWidth > 0 ? statusIconGap : 0;
     const int bookmarkX = leftClusterX + leftClusterWidth + bookmarkGap;
     const int bookmarkY = textY + 5;
-    drawBookmarkStatusIcon(renderer, bookmarkX, bookmarkY);
-    leftClusterWidth += bookmarkStatusIconWidth + bookmarkGap;
+    drawStatusIcon(renderer, BookmarkStatusIcon, bookmarkX, bookmarkY);
+    leftClusterWidth += statusIconWidth + bookmarkGap;
+  }
+
+  // Draw Tilt Session
+  if (showStatusBarTextLane && tiltSessionIconVisible()) {
+    const int tiltGap = leftClusterWidth > 0 ? statusIconGap : 0;
+    drawStatusIcon(renderer, TiltStatusIcon, leftClusterX + leftClusterWidth + tiltGap, textY + 5);
+    leftClusterWidth += statusIconWidth + tiltGap;
   }
 
   // Draw Title

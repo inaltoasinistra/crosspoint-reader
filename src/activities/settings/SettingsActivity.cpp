@@ -273,12 +273,15 @@ void SettingsActivity::toggleCurrentSetting() {
     const bool currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = !currentValue;
   } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
-    const uint8_t currentValue = SETTINGS.*(setting.valuePtr);
-    if (setting.enumValues.size() > 2) {
+    const size_t optionCount = setting.enumValues.size();
+    const size_t currentIndex = setting.enumIndexOf(SETTINGS.*(setting.valuePtr));
+    if (optionCount > 2) {
       const auto valuePtr = setting.valuePtr;
-      optionPopup.show(setting.nameId, setting.enumValues.data(), static_cast<int>(setting.enumValues.size()),
-                       currentValue, [this, valuePtr, sleepScreenChanged, quickResumeTimeoutChanged](int idx) {
-                         SETTINGS.*valuePtr = idx;
+      const auto storedValues = setting.enumStoredValues;
+      optionPopup.show(setting.nameId, setting.enumValues.data(), static_cast<int>(optionCount),
+                       static_cast<int>(currentIndex < optionCount ? currentIndex : 0),
+                       [this, valuePtr, storedValues, sleepScreenChanged, quickResumeTimeoutChanged](int idx) {
+                         SETTINGS.*valuePtr = storedValues.empty() ? idx : storedValues[idx];
                          syncQuickResumeTimeoutForSleepScreen(sleepScreenChanged, quickResumeTimeoutChanged);
                          SETTINGS.saveToFile();
                          rebuildSettingsLists();
@@ -287,7 +290,7 @@ void SettingsActivity::toggleCurrentSetting() {
       requestUpdate();
       return;
     }
-    SETTINGS.*(setting.valuePtr) = (currentValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
+    SETTINGS.*(setting.valuePtr) = setting.enumStoredAt((currentIndex + 1) % optionCount);
   } else if (setting.type == SettingType::ENUM && setting.valueGetter && setting.valueSetter) {
     const uint8_t totalValues = setting.enumStringValues.empty()
                                     ? static_cast<uint8_t>(setting.enumValues.size())
@@ -439,9 +442,9 @@ std::string SettingsActivity::settingValueText(const SettingInfo& setting) {
   if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
     // Guard like the valueGetter branch below: a corrupt/migrated settings
     // byte must not index past the enum table.
-    const uint8_t value = SETTINGS.*(setting.valuePtr);
-    if (value >= setting.enumValues.size()) return "";
-    return I18N.get(setting.enumValues[value]);
+    const size_t index = setting.enumIndexOf(SETTINGS.*(setting.valuePtr));
+    if (index >= setting.enumValues.size()) return "";
+    return I18N.get(setting.enumValues[index]);
   }
   if (setting.type == SettingType::ENUM && setting.valueGetter) {
     const uint8_t value = setting.valueGetter();

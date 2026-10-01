@@ -299,6 +299,8 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - "Bookmark" (default) - Hold Confirm (~0.4 second) to drop a bookmark at the current page.
   - "KOSync" - Hold Confirm (~1 second) to launch KOReader sync directly.
   - "Dictionary" - Hold Confirm (~0.4 second) to start dictionary word selection on the current page (see [docs/dictionary.md](docs/dictionary.md)).
+  - "Tilt page turn" (Xteink X3 only) - Hold Confirm (~0.4 second) to turn tilt page turning on or off until the
+    device sleeps (see **Tilt Activation** below).
   - "Disabled" - Long-press is ignored; only short-press opens the reader menu.
 
 - **Short Power Button Click**: Controls the effect of a short click of the power button:
@@ -604,6 +606,14 @@ On the **Xteink X3**, the gyroscope can be used to turn pages by tilting the dev
 - **Accel filter**: ignores rotations while the device is also being moved (picked up, carried, bumped).
 - **Flick & return**: like Accel filter, but the page turns only after you flick the device and bring it back to
   the reading position.
+
+**Tilt Activation** controls when tilt page turning is live:
+- **Always**: tilt works whenever Tilt Page Turn is on.
+- **Until sleep**: every time the device starts or wakes up, tilt is off, so pages cannot turn while the device is
+  carried around (for example after an accidental power-on in a bag). To turn it on for the current reading session,
+  set **Long-press Menu** to **Tilt page turn** and long-press Confirm while reading. Long-press again to turn it
+  off. It turns off by itself when the device goes to sleep. While it is on, a tilt icon is shown in the status bar
+  (when the status bar shows text).
 
 ### Footnote Navigation
 

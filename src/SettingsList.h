@@ -185,6 +185,22 @@ inline std::vector<StrId> buildLongPressMenuValues() {
   return {VALUES, VALUES + count};
 }
 
+// Offer the tilt-arm long-press action. On boards without a home key the list already
+// skips LP_MENU_READER_MENU, so option indices stop matching stored values and the
+// entry needs an explicit stored-value map.
+inline void addLongPressTiltOption(std::vector<SettingInfo>& settings) {
+  for (auto& setting : settings) {
+    if (setting.valuePtr != &CrossPointSettings::longPressMenuFunction) continue;
+    setting.enumStoredValues.reserve(setting.enumValues.size() + 1);
+    for (size_t i = 0; i < setting.enumValues.size(); ++i) {
+      setting.enumStoredValues.push_back(static_cast<uint8_t>(i));
+    }
+    setting.enumValues.push_back(StrId::STR_LP_TILT);
+    setting.enumStoredValues.push_back(CrossPointSettings::LP_MENU_TILT);
+    return;
+  }
+}
+
 // Shared settings list used by both the device settings UI and the web settings API.
 // Each entry has a key (for JSON API) and category (for grouping).
 // ACTION-type entries and entries without a key are device-only.
@@ -453,13 +469,17 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
           it = v.insert(it + 1, SettingInfo::Enum(StrId::STR_TILT_PAGE_TURN, &CrossPointSettings::tiltPageTurn,
                                                   {StrId::STR_STATE_OFF, StrId::STR_NORMAL, StrId::STR_INVERTED},
                                                   "tiltPageTurn", StrId::STR_CAT_CONTROLS));
-          v.insert(it + 1, SettingInfo::Enum(StrId::STR_TILT_DETECTION, &CrossPointSettings::tiltDetection,
-                                             {StrId::STR_TILT_DETECT_RATE, StrId::STR_TILT_DETECT_ACCEL,
-                                              StrId::STR_TILT_DETECT_ACCEL_RETURN},
-                                             "tiltDetection", StrId::STR_CAT_CONTROLS));
+          it = v.insert(it + 1, SettingInfo::Enum(StrId::STR_TILT_DETECTION, &CrossPointSettings::tiltDetection,
+                                                  {StrId::STR_TILT_DETECT_RATE, StrId::STR_TILT_DETECT_ACCEL,
+                                                   StrId::STR_TILT_DETECT_ACCEL_RETURN},
+                                                  "tiltDetection", StrId::STR_CAT_CONTROLS));
+          v.insert(it + 1, SettingInfo::Enum(StrId::STR_TILT_ACTIVATION, &CrossPointSettings::tiltActivation,
+                                             {StrId::STR_TILT_ALWAYS, StrId::STR_TILT_UNTIL_SLEEP}, "tiltActivation",
+                                             StrId::STR_CAT_CONTROLS));
           break;
         }
       }
+      addLongPressTiltOption(v);
     }
     return v;
   }();

@@ -151,6 +151,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LP_MENU_BOOKMARK = 2,
     LP_MENU_DICTIONARY = 3,
     LP_MENU_READER_MENU = 4,
+    LP_MENU_TILT = 5,
     LONG_PRESS_MENU_FUNCTION_COUNT
   };
 
@@ -184,6 +185,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     TILT_DETECT_ACCEL_RETURN = 2,
     TILT_DETECTION_COUNT
   };
+
+  // UNTIL_SLEEP starts every power-on session with tilt disarmed until the long-press action arms it.
+  enum TILT_ACTIVATION { TILT_ALWAYS = 0, TILT_UNTIL_SLEEP = 1, TILT_ACTIVATION_COUNT };
 
   enum TOUCH_READER_CONTROLS {
     TOUCH_READER_OFF = 0,
@@ -312,6 +316,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t tiltPageTurn = TILT_OFF;
   // How a tilt gesture is recognized: rate only, rate + accelerometer gate, or flick-and-return
   uint8_t tiltDetection = TILT_DETECT_RATE;
+  uint8_t tiltActivation = TILT_ALWAYS;
   // Touch screen reader zones/gestures on boards with a touch controller.
   uint8_t touchReaderControls = TOUCH_READER_SWIPE;
   // Reader menu open gesture (SHOW_READER_MENU: off / center tap / bottom-edge

@@ -600,7 +600,7 @@ void loop() {
     return;
   }
 
-  halTiltSensor.update(SETTINGS.tiltPageTurn, SETTINGS.tiltDetection, SETTINGS.orientation,
+  halTiltSensor.update(SETTINGS.tiltPageTurn, SETTINGS.tiltDetection, SETTINGS.tiltActivation, SETTINGS.orientation,
                        activityManager.isReaderActivity());
 
   renderer.setFadingFix(SETTINGS.fadingFix);

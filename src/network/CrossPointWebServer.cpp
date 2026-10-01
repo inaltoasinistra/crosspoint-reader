@@ -1190,7 +1190,7 @@ void CrossPointWebServer::handleGetSettings() const {
       case SettingType::ENUM: {
         doc["type"] = "enum";
         if (s.valuePtr) {
-          doc["value"] = static_cast<int>(SETTINGS.*(s.valuePtr));
+          doc["value"] = static_cast<int>(s.enumIndexOf(SETTINGS.*(s.valuePtr)));
         } else if (s.valueGetter) {
           doc["value"] = static_cast<int>(s.valueGetter());
         }
@@ -1286,7 +1286,7 @@ void CrossPointWebServer::handlePostSettings() {
                                                       : static_cast<int>(s.enumStringValues.size());
         if (val >= 0 && val < maxVal) {
           if (s.valuePtr) {
-            SETTINGS.*(s.valuePtr) = static_cast<uint8_t>(val);
+            SETTINGS.*(s.valuePtr) = s.enumStoredAt(static_cast<size_t>(val));
           } else if (s.valueSetter) {
             s.valueSetter(static_cast<uint8_t>(val));
           }

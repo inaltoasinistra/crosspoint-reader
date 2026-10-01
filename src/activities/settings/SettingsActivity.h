@@ -33,6 +33,9 @@ struct SettingInfo {
   uint8_t CrossPointSettings::* valuePtr = nullptr;
   std::vector<StrId> enumValues;
   std::vector<std::string> enumStringValues;  // runtime alternative to StrId enumValues (for SD card fonts etc.)
+  // Stored field value of each enumValues option, for valuePtr enums whose list skips values this
+  // board can't use. Empty means the option index is the stored value.
+  std::vector<uint8_t> enumStoredValues;
   SettingAction action = SettingAction::None;
 
   struct ValueRange {
@@ -56,6 +59,20 @@ struct SettingInfo {
   std::function<void(uint8_t)> valueSetter;
   std::function<std::string()> stringGetter;
   std::function<void(const std::string&)> stringSetter;
+
+  uint8_t enumStoredAt(const size_t index) const {
+    return enumStoredValues.empty() ? static_cast<uint8_t>(index) : enumStoredValues[index];
+  }
+
+  // Option index holding a stored value. Unmapped enums return the value itself (callers range-check it);
+  // mapped ones return enumValues.size() when no option holds it.
+  size_t enumIndexOf(const uint8_t stored) const {
+    if (enumStoredValues.empty()) return stored;
+    for (size_t i = 0; i < enumStoredValues.size(); ++i) {
+      if (enumStoredValues[i] == stored) return i;
+    }
+    return enumValues.size();
+  }
 
   SettingInfo& withObfuscated() {
     obfuscated = true;

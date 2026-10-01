@@ -152,6 +152,7 @@ class EpubReaderActivity final : public ReaderActivity {
   void openDictionaryWordSelect();
   bool launchKOReaderSync();
   unsigned long confirmLongPressThreshold() const;
+  void toggleTiltSession();
   void toggleAutoPageTurn(uint8_t selectedPageTurnOption);
   void loadCachedBookmarks();
   void addBookmark();
