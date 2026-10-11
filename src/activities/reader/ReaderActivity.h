@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ButtonChord.h>
+
 #include <atomic>
 #include <memory>
 #include <string>
@@ -16,6 +18,8 @@ class ReaderActivity : public Activity {
 
   std::unique_ptr<EndOfBookOptions> endOfBookOptions;
   std::atomic<bool> endOfBookOptionsReady{false};
+  // Last side-button press turn, reversed if that button turns out to start a Power chord.
+  ChordTurn sidePressTurn;
 
   explicit ReaderActivity(const char* name, GfxRenderer& renderer, MappedInputManager& mappedInput,
                           std::string bookPath, bool allowFastInitialRefresh);
@@ -41,6 +45,9 @@ class ReaderActivity : public Activity {
   bool handleEndOfBookMenu(bool suppressConfirmRelease = false);
   bool handleEndOfBookPageTurn(bool prevTriggered, bool nextTriggered);
   void clearEndOfBookOptionsIfNeeded();
+  void recordTurn(bool forward, bool fromSidePress);
+  // Drop a side-press turn that is queued but not applied yet.
+  virtual void cancelPendingSidePressTurn() {}
   void disableFastInitialRefresh();
 
  public:
@@ -56,4 +63,5 @@ class ReaderActivity : public Activity {
 
   bool isReaderActivity() const final { return true; }
   bool handleForcedRefresh() final;
+  bool revertChordPageTurn() final;
 };

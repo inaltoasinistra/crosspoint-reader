@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <BoardConfig.h>
+#include <ButtonChord.h>
 #include <Epub.h>
 #include <FontCacheManager.h>
 #include <FontDecompressor.h>
@@ -22,8 +23,11 @@
 #include <esp_sntp.h>
 #endif
 
+#include <algorithm>
 #include <cstring>
+#include <iterator>
 
+#include "ControlsLock.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "KOReaderCredentialStore.h"
@@ -44,6 +48,7 @@
 GfxRenderer renderer(display);
 MappedInputManager mappedInputManager(gpio, renderer);
 ActivityManager activityManager(renderer, mappedInputManager);
+bool controlsLocked = false;
 FontDecompressor fontDecompressor;
 SdCardFontSystem sdFontSystem;
 FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
@@ -423,6 +428,7 @@ void setup() {
     SETTINGS.readerMenuStyle = CrossPointSettings::READER_MENU_TOOLBAR;
   }
   SETTINGS.loadFromFile();
+  controlsLocked = SETTINGS.lockOnWake;
   RECENT_BOOKS.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
@@ -576,6 +582,90 @@ void setup() {
   allowSleepAt = millis() + 2000;
 }
 
+namespace {
+
+// Global Power + side-button chords. Power, the side buttons and the front ADC ladder are separate
+// inputs, so these chords are readable; two front buttons are not (the ladder decodes one at a time).
+enum class ChordAction : uint8_t { ControlsLock, Screenshot };
+struct ChordSpec {
+  ChordAction action;
+  uint8_t sideButton;
+};
+constexpr ChordSpec BUTTON_CHORDS[] = {
+    {ChordAction::ControlsLock, HalGPIO::BTN_UP},
+    {ChordAction::Screenshot, HalGPIO::BTN_DOWN},
+};
+ButtonChord buttonChords[std::size(BUTTON_CHORDS)];
+HoldButtonChord paperMonoLockChord;
+
+struct ChordPoll {
+  bool fired;  // A chord fired on this poll
+  bool held;   // A chord owns its buttons; their input must not reach activities
+};
+
+void runChordAction(const ChordAction action) {
+  // With page turns on press, the side button may have turned a page before Power completed the chord.
+  const bool reverted = activityManager.revertChordPageTurn();
+  switch (action) {
+    case ChordAction::ControlsLock:
+      controlsLocked = !controlsLocked;
+      if (controlsLocked) activityManager.onControlsLocked();
+      LOG_DBG("MAIN", "Controls %s", controlsLocked ? "locked" : "unlocked");
+      // Drop a tilt fired before the lock so it cannot turn a page on the next reader loop.
+      halTiltSensor.clearPendingEvents();
+      // Redraw the status bar lock icon.
+      activityManager.requestUpdate();
+      break;
+    case ChordAction::Screenshot:
+      // Capture the restored page, not the one the side button turned to.
+      if (reverted) activityManager.requestUpdateAndWait();
+      {
+        RenderLock lock;
+        ScreenshotUtil::takeScreenshot(renderer);
+      }
+      break;
+  }
+}
+
+ChordPoll updateButtonChords() {
+  const bool powerDown = gpio.isPressed(HalGPIO::BTN_POWER);
+  const bool inReader = activityManager.isReaderInForeground();
+  ChordPoll poll{false, false};
+  if (BoardConfig::isPaperMono()) {
+    if (inReader || paperMonoLockChord.isHeld()) {
+      bool up, down;
+      gpio.readPhysicalSideButtons(up, down);
+      if (paperMonoLockChord.update(up, down, millis()) && inReader) {
+        runChordAction(ChordAction::ControlsLock);
+        poll.fired = true;
+      }
+      poll.held = paperMonoLockChord.isHeld();
+    }
+    return poll;
+  }
+  for (size_t i = 0; i < std::size(BUTTON_CHORDS); ++i) {
+    const ChordSpec& spec = BUTTON_CHORDS[i];
+    ButtonChord& chord = buttonChords[i];
+    if (spec.action == ChordAction::ControlsLock && !inReader) {
+      chord.reset();
+      continue;
+    }
+    if (chord.update(powerDown, gpio.isPressed(spec.sideButton))) {
+      runChordAction(spec.action);
+      poll.fired = true;
+    }
+    poll.held = poll.held || chord.isHeld();
+  }
+  return poll;
+}
+
+bool isChordSideButtonDown() {
+  return std::any_of(std::begin(BUTTON_CHORDS), std::end(BUTTON_CHORDS),
+                     [](const ChordSpec& spec) { return gpio.isPressed(spec.sideButton); });
+}
+
+}  // namespace
+
 void loop() {
   static unsigned long maxLoopDuration = 0;
   const unsigned long loopStartTime = millis();
@@ -585,6 +675,7 @@ void loop() {
   mappedInputManager.update();
 
   if (activityManager.requiresExclusiveStorageLoop()) {
+    mappedInputManager.setInputBlocked(false);
     // USB Drive handed the raw SD card to the host. Do not run screenshots,
     // sleep, shortcuts, or normal navigation while its filesystem is detached.
     activityManager.loop();
@@ -600,8 +691,15 @@ void loop() {
     return;
   }
 
-  halTiltSensor.update(SETTINGS.tiltPageTurn, SETTINGS.tiltDetection, SETTINGS.orientation,
-                       activityManager.isReaderActivity());
+  // Power chords run before anything reads input, because a held chord blocks the mapped queries.
+  // They read the raw buttons since those queries are exactly what they block.
+  const ChordPoll chords = updateButtonChords();
+  const bool inputLocked = activityManager.isReaderInForeground() && controlsLocked;
+  mappedInputManager.setInputBlocked(inputLocked || chords.held);
+
+  // A locked reader powers the gyro down like Tilt Page Turn = Off.
+  halTiltSensor.update(inputLocked ? CrossPointTiltPageTurn::TILT_OFF : SETTINGS.tiltPageTurn, SETTINGS.tiltDetection,
+                       SETTINGS.orientation, activityManager.isReaderActivity());
 
   renderer.setFadingFix(SETTINGS.fadingFix);
 
@@ -630,7 +728,9 @@ void loop() {
 
   // Check for any user activity (button press or release) or active background work
   static unsigned long lastActivityTime = millis();
-  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() || gpio.wasTouchActivity() || halTiltSensor.hadActivity() ||
+  // Presses on a locked reader are ignored here too, so a button held down in a bag cannot keep it awake.
+  const bool userInput = gpio.wasAnyPressed() || gpio.wasAnyReleased() || gpio.wasTouchActivity();
+  if (chords.fired || (userInput && !inputLocked) || halTiltSensor.hadActivity() ||
       activityManager.preventAutoSleep()) {
     lastActivityTime = millis();         // Reset inactivity timer
     powerManager.setPowerSaving(false);  // Restore normal CPU frequency on user activity
@@ -644,33 +744,9 @@ void loop() {
     return;
   }
 
-  static bool screenshotButtonsReleased = true;
-  static bool screenshotComboActive = false;
-  if (gpio.isPressed(HalGPIO::BTN_POWER) && gpio.isPressed(HalGPIO::BTN_DOWN)) {
-    screenshotComboActive = true;
-    if (screenshotButtonsReleased) {
-      screenshotButtonsReleased = false;
-      {
-        RenderLock lock;
-        ScreenshotUtil::takeScreenshot(renderer);
-      }
-    }
-    return;
-  }
-  if (screenshotComboActive) {
-    if (gpio.isPressed(HalGPIO::BTN_POWER)) return;
-    if (gpio.wasReleased(HalGPIO::BTN_POWER)) {
-      screenshotButtonsReleased = true;
-      screenshotComboActive = false;
-      return;
-    }
-    screenshotButtonsReleased = true;
-    screenshotComboActive = false;
-  }
-
   // Consume the second X4 Pro power-button release so it does not also run a
   // configured short-power action after toggling the frontlight.
-  if (handleX4ProFrontlightDoubleClick()) {
+  if (!chords.held && handleX4ProFrontlightDoubleClick()) {
     return;
   }
 
@@ -699,10 +775,11 @@ void loop() {
   static bool powerReleasedSinceWake = false;
   if (!gpio.isPressed(HalGPIO::BTN_POWER)) powerReleasedSinceWake = true;
 
-  if (powerReleasedSinceWake && millis() >= allowSleepAt && gpio.isPressed(HalGPIO::BTN_POWER) &&
+  // A held chord owns Power, so a Power hold that outlasts its side button is not a sleep press.
+  if (!chords.held && powerReleasedSinceWake && millis() >= allowSleepAt && gpio.isPressed(HalGPIO::BTN_POWER) &&
       gpio.getPowerButtonHeldTime() > SETTINGS.getPowerButtonDuration()) {
-    // If the screenshot combination is potentially being pressed, don't sleep
-    if (gpio.isPressed(HalGPIO::BTN_DOWN)) {
+    // If a Power chord is potentially being pressed, don't sleep
+    if (isChordSideButtonDown()) {
       return;
     }
     LOG_DBG("MAIN", "Power button held %lums, sleeping", gpio.getPowerButtonHeldTime());
@@ -714,10 +791,11 @@ void loop() {
 #if FREEINK_DEVICE_PAPERMONO
   // Paper Mono reports the PMIC power button as a one-tick click, so the held
   // path above cannot fire. With the default Ignore action, retain the normal
-  // power-button meaning and shut down; explicit alternate bindings still win.
+  // power-button meaning even while locked; the side-button lock hold owns its
+  // synthesized Power events. Explicit alternate bindings still win.
   if ((SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP ||
        SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::IGNORE) &&
-      millis() >= allowSleepAt && mappedInputManager.wasReleased(MappedInputManager::Button::Power)) {
+      millis() >= allowSleepAt && !chords.held && gpio.wasReleased(HalGPIO::BTN_POWER)) {
     enterDeepSleep();
     return;
   }

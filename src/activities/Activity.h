@@ -47,6 +47,11 @@ class Activity {
   // transitions so no filesystem code races a raw SD-card owner.
   virtual bool requiresExclusiveStorageLoop() const { return false; }
   virtual bool isReaderActivity() const { return false; }
+  // A global Power + side-button chord fired: undo a page turn its side button made on press.
+  // Returns true when the screen content changed (a repaint is pending).
+  virtual bool revertChordPageTurn() { return false; }
+  // Discard queued input when the reader controls become locked.
+  virtual void onControlsLocked() {}
   // Returns true when the activity schedules its own forced refresh.
   virtual bool handleForcedRefresh() { return false; }
   virtual bool isHomeActivity() const { return false; }
