@@ -60,6 +60,9 @@ struct PageTurnResult {
   bool prev;
   bool next;
   bool fromTilt;
+  // Fired on the press of a side page button ("turn on press"), before it is known whether that
+  // button starts a Power chord.
+  bool fromSidePress;
 };
 
 inline PageTurnResult detectPageTurn(const MappedInputManager& input) {
@@ -80,7 +83,9 @@ inline PageTurnResult detectPageTurn(const MappedInputManager& input) {
   const bool next = input.homeButtonAction() == HomeButtonAction::NextPage || tiltNext ||
                     pageButtonTriggered(MappedInputManager::Button::PageForward) || powerTurn ||
                     pageButtonTriggered(nextButton);
-  return {prev, next, tiltPrev || tiltNext};
+  const bool fromSidePress = usePress && (input.wasPressed(MappedInputManager::Button::PageBack) ||
+                                          input.wasPressed(MappedInputManager::Button::PageForward));
+  return {prev, next, tiltPrev || tiltNext, fromSidePress};
 }
 
 struct TouchPageTurn {

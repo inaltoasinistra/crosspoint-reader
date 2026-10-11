@@ -33,6 +33,7 @@ class EpubReaderActivity final : public ReaderActivity {
   unsigned long lastPageTurnTime = 0UL;
   unsigned long pageTurnDuration = 0UL;
   int8_t pendingManualTurn = 0;
+  bool pendingTurnFromSidePress = false;
   bool pendingPercentJump = false;
   float pendingSpineProgress = 0.0f;
   bool pendingScreenshot = false;
@@ -191,6 +192,7 @@ class EpubReaderActivity final : public ReaderActivity {
   std::string getBookThumbBmpPath() const override { return epub ? epub->getThumbBmpPath() : ""; }
   void renderBook() override;
   void onEndOfBookRendered() override;
+  void cancelPendingSidePressTurn() override;
 
  public:
   explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string bookPath,
@@ -199,6 +201,7 @@ class EpubReaderActivity final : public ReaderActivity {
   ~EpubReaderActivity() override;
 
   void loop() override;
+  void onControlsLocked() override;
 
   bool pageTurn(bool isForward) override;
   bool skipPages(int amount) override;

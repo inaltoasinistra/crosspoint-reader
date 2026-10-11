@@ -90,6 +90,7 @@ STR_CALIBRE_INSTRUCTION_4: "Не закрывайте этот экран во �
 STR_CAT_DISPLAY: "Экран"
 STR_CAT_READER: "Чтение"
 STR_CAT_CONTROLS: "Кнопки"
+STR_LOCK_ON_WAKE: "Блокировать кнопки при пробуждении"
 STR_CAT_SYSTEM: "Система"
 STR_SLEEP_SCREEN: "Экран сна"
 STR_TOUCH_TOGGLE: "Сенсор"

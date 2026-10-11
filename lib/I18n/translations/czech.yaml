@@ -70,6 +70,7 @@ STR_CALIBRE_INSTRUCTION_4: "„Při odesílání ponechat tuto obrazovku otevře
 STR_CAT_DISPLAY: "Displej"
 STR_CAT_READER: "Čtečka"
 STR_CAT_CONTROLS: "Ovládání"
+STR_LOCK_ON_WAKE: "Zamknout ovládání po probuzení"
 STR_CAT_SYSTEM: "Systém"
 STR_SLEEP_SCREEN: "Obrazovka spánku"
 STR_NIGHT_MODE: "Noční režim"

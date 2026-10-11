@@ -78,6 +78,7 @@ STR_CALIBRE_INSTRUCTION_4: "\"Дръж този екран отворен по �
 STR_CAT_DISPLAY: "Екран"
 STR_CAT_READER: "Четец"
 STR_CAT_CONTROLS: "Контрол"
+STR_LOCK_ON_WAKE: "Заключване на бутоните при събуждане"
 STR_CAT_SYSTEM: "Система"
 STR_SLEEP_SCREEN: "Екран при спящ режим"
 STR_QUICK_RESUME_TIMEOUT: "Бързо продълж. при неактивност"

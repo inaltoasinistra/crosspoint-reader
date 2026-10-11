@@ -649,12 +649,13 @@ void EpubReaderActivity::loop() {
     }
     const bool forward = pendingManualTurn > 0;
     pendingManualTurn = 0;
-    pageTurn(forward);
+    const bool turned = pageTurn(forward);
+    recordTurn(forward, pendingTurnFromSidePress && turned);
     requestUpdate();
     return;
   }
 
-  auto [prevTriggered, nextTriggered, fromTilt] = ReaderUtils::detectPageTurn(mappedInput);
+  auto [prevTriggered, nextTriggered, fromTilt, fromSidePress] = ReaderUtils::detectPageTurn(mappedInput);
   prevTriggered = prevTriggered || touch.prev;
   nextTriggered = nextTriggered || touch.next;
   if (!prevTriggered && !nextTriggered) {
@@ -662,11 +663,6 @@ void EpubReaderActivity::loop() {
   }
 
   if (handleEndOfBookPageTurn(prevTriggered, nextTriggered)) {
-    return;
-  }
-
-  if (mappedInput.wasReleased(MappedInputManager::Button::Power) &&
-      mappedInput.wasReleased(MappedInputManager::Button::Down)) {
     return;
   }
 
@@ -694,15 +690,22 @@ void EpubReaderActivity::loop() {
 
   if (turnGuardActive) {
     pendingManualTurn = prevTriggered ? -1 : 1;
+    pendingTurnFromSidePress = fromSidePress;
     return;
   }
 
-  if (prevTriggered) {
-    pageTurn(false);
-  } else {
-    pageTurn(true);
-  }
+  const bool turned = pageTurn(!prevTriggered);
+  recordTurn(!prevTriggered, fromSidePress && turned);
   requestUpdate();
+}
+
+void EpubReaderActivity::cancelPendingSidePressTurn() {
+  if (pendingTurnFromSidePress) pendingManualTurn = 0;
+}
+
+void EpubReaderActivity::onControlsLocked() {
+  pendingManualTurn = 0;
+  pendingTurnFromSidePress = false;
 }
 
 void EpubReaderActivity::jumpToPercent(int percent) {

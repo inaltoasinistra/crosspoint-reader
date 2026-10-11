@@ -10,6 +10,7 @@
 
 #include <algorithm>
 
+#include "ControlsLock.h"
 #include "CrossPointSettings.h"
 #include "OpdsServerStore.h"
 #include "boot_sleep/BootActivity.h"
@@ -287,7 +288,7 @@ void ActivityManager::goToBrowser() {
   }
 }
 
-void ActivityManager::goToReader(std::string path, const bool allowFastInitialRefresh) {
+void ActivityManager::goToReader(std::string path, const bool allowFastInitialRefresh, const bool startLocked) {
   if (path.empty()) {
     goToFileBrowser("/");
     return;
@@ -305,6 +306,8 @@ void ActivityManager::goToReader(std::string path, const bool allowFastInitialRe
 
   auto activity = ReaderActivity::create(renderer, mappedInput, std::move(path), allowFastInitialRefresh);
   if (activity) {
+    // A new reading session starts unlocked unless it is the reader restored on wake.
+    controlsLocked = startLocked;
     replaceActivity(std::move(activity));
   }
 }
@@ -370,6 +373,14 @@ bool ActivityManager::isReaderActivity() const {
   return std::any_of(stackActivities.begin(), stackActivities.end(),
                      [](const auto& activity) { return activity->isReaderActivity(); }) ||
          (currentActivity && currentActivity->isReaderActivity());
+}
+
+bool ActivityManager::isReaderInForeground() const { return currentActivity && currentActivity->isReaderActivity(); }
+
+bool ActivityManager::revertChordPageTurn() { return currentActivity && currentActivity->revertChordPageTurn(); }
+
+void ActivityManager::onControlsLocked() {
+  if (currentActivity) currentActivity->onControlsLocked();
 }
 
 bool ActivityManager::handleForcedRefresh() { return currentActivity && currentActivity->handleForcedRefresh(); }

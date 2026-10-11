@@ -68,6 +68,8 @@ Button layout can be customized in the **[Controls Settings](#363-controls)**.
 ### Taking a Screenshot
 
 When the Power button and the lower side button (Side Down) are pressed at the same time, it will take a screenshot and save it in the folder `screenshots/`.
+If Side Down turned a page on press just before Power completed the combination, that page turn is reversed first,
+so the screenshot shows the page you were on.
 
 Alternatively, while reading a book, press the **Confirm** button to open the reader menu and select **Take screenshot**.
 
@@ -324,6 +326,8 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - "Footnotes" - A short press in reading mode opens the footnotes submenu; if only one footnote is present on the page, the referenced page is opened directly. The short press on the power button can be used to select the footnote in the submenu, and to go back to the original page after finish reading the footnote (like the back button).
   - "Refresh" - A short press triggers a manual full-screen refresh, useful for clearing ghosting
 - **Quick-return from footnotes**: Toggles on and off the quick return functionality from the footnotes. When the functionality it's active, a short press of the power button will act as the back button from the footnotes page.
+- **Lock Controls on Wake**: When on, every boot and every wake from sleep starts with the reader controls locked
+  (see [Controls Lock](#controls-lock)). Default off.
 
 #### 3.6.4 System
 
@@ -617,6 +621,28 @@ Auto Page Turn automatically advances pages at a set interval, useful for hands-
 ### Tilt Page Turn (X3 only)
 
 On the **Xteink X3**, the gyroscope can be used to turn pages by tilting the device. This feature is available in the Controls settings.
+
+### Controls Lock
+
+Press **Power** and the side **Up** button together while reading to lock the controls, so pages cannot turn while
+the device is carried around (for example in a bag). Press both again to unlock.
+On **Paper Mono**, hold both side buttons together for **2 seconds** instead. Release both before repeating the
+gesture. While reading, this combination locks/unlocks instead of sleeping; releasing early cancels it without
+turning a page or opening a menu.
+
+While locked:
+- a lock icon is shown in the status bar (when the status bar shows text);
+- buttons, touch, short Power actions and tilt page turning are ignored;
+- a long press of Power still puts the device to sleep, and the screenshot combination still works;
+- on Paper Mono, a click of the physical Power button still sleeps with Short Power Button Press set to Ignore or Sleep;
+- presses do not reset the sleep timer, so a button stuck down in a bag cannot keep the device awake.
+
+When pages turn on press (**Long-press button behavior** set to "Off"), pressing Up a moment before Power may turn a
+page; that page turn is reversed when the lock toggles.
+
+The lock applies only while reading. Enable **Lock Controls on Wake** in the Controls settings to lock the reader
+when waking directly back into a book. Waking to Home and opening a book later starts unlocked, as does opening a
+different book after leaving the reader.
 
 ### Footnote Navigation
 

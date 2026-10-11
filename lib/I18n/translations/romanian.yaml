@@ -68,6 +68,7 @@ STR_CALIBRE_INSTRUCTION_4: "\"Păstraţi acest ecran deschis în timpul trimiter
 STR_CAT_DISPLAY: "Ecran"
 STR_CAT_READER: "Lectură"
 STR_CAT_CONTROLS: "Controale"
+STR_LOCK_ON_WAKE: "Blochează comenzile la trezire"
 STR_CAT_SYSTEM: "Sistem"
 STR_SLEEP_SCREEN: "Ecran de repaus"
 STR_NIGHT_MODE: "Mod nocturn"
