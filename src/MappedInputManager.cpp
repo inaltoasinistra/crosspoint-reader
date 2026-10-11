@@ -61,6 +61,7 @@ MappedInputManager::Button MappedInputManager::mapScreenDirection(const Button b
 }
 
 bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint8_t) const) const {
+  if (inputBlocked) return false;
   const auto sideLayout = SETTINGS.sideButtonLayout;
 
   switch (button) {
@@ -140,6 +141,7 @@ void MappedInputManager::rememberTouchHeldTime() const {
 }
 
 bool MappedInputManager::wasScreenTapped(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   if (!gpio.wasTouchTap(nx, ny)) return false;
@@ -149,6 +151,7 @@ bool MappedInputManager::wasScreenTapped(int& x, int& y) const {
 }
 
 bool MappedInputManager::wasScreenTouchDown(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   unsigned long heldMs = 0;
@@ -159,6 +162,7 @@ bool MappedInputManager::wasScreenTouchDown(int& x, int& y) const {
 }
 
 bool MappedInputManager::wasScreenLongPress(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   if (!gpio.wasTouchLongPress(nx, ny)) return false;
@@ -170,6 +174,7 @@ bool MappedInputManager::wasScreenLongPress(int& x, int& y) const {
 }
 
 bool MappedInputManager::isScreenTouchHeld(int& x, int& y) const {
+  if (inputBlocked) return false;
   // Live contact position while the finger is down (no tap-slop gate) — drag tracking.
   float nx = 0.0f;
   float ny = 0.0f;
@@ -225,6 +230,7 @@ MappedInputManager::RowTouch MappedInputManager::colTouch(int& col, const int le
 }
 
 bool MappedInputManager::decodeSwipe(int& sx, int& sy, int& ex, int& ey) const {
+  if (inputBlocked) return false;
   float nxs = 0.0f;
   float nys = 0.0f;
   float nxe = 0.0f;
@@ -285,10 +291,13 @@ bool MappedInputManager::wasMenuGesture() const { return wasTopEdgeDownSwipe(); 
 bool MappedInputManager::wasReaderMenuSwipeUp() const { return gpio.hasHomeKey() && wasBottomEdgeUpSwipe(); }
 
 bool MappedInputManager::wasHomeGesture() const {
+  if (inputBlocked) return false;
   return gpio.hasHomeKey() ? gpio.wasHomeKeyTapped() : wasBottomEdgeUpSwipe();
 }
 
-bool MappedInputManager::wasHomeKeyHold() const { return gpio.hasHomeKey() && gpio.wasHomeKeyLongPressed(); }
+bool MappedInputManager::wasHomeKeyHold() const {
+  return !inputBlocked && gpio.hasHomeKey() && gpio.wasHomeKeyLongPressed();
+}
 
 bool MappedInputManager::wasLightPanelGesture() const {
   // On lightless boards the same edge remains available to the reader menu.
@@ -297,6 +306,7 @@ bool MappedInputManager::wasLightPanelGesture() const {
 
 #if FREEINK_CAP_TOUCH
 bool MappedInputManager::wasPowerConfirmClick() const {
+  if (inputBlocked) return false;
   if (!gpio.hasTouch() || SETTINGS.shortPwrBtn != CrossPointSettings::SHORT_PWRBTN::PWR_CONFIRM) return false;
   // Wait out the X4 Pro's frontlight double-click window before treating its
   // first release as Confirm. Other touch boards can use the release directly.
@@ -348,9 +358,9 @@ bool MappedInputManager::consumeSuppressedRelease() const {
 
 bool MappedInputManager::isPressed(const Button button) const { return mapButton(button, &HalGPIO::isPressed); }
 
-bool MappedInputManager::wasAnyPressed() const { return gpio.wasAnyPressed(); }
+bool MappedInputManager::wasAnyPressed() const { return !inputBlocked && gpio.wasAnyPressed(); }
 
-bool MappedInputManager::wasAnyReleased() const { return gpio.wasAnyReleased(); }
+bool MappedInputManager::wasAnyReleased() const { return !inputBlocked && gpio.wasAnyReleased(); }
 
 unsigned long MappedInputManager::getHeldTime() const {
   if (!gpio.wasAnyPressed() && !gpio.wasAnyReleased() && touchHeldOverrideValid &&

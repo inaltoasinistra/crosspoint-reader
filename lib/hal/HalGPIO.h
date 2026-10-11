@@ -78,6 +78,9 @@ class HalGPIO {
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;
   unsigned long getPowerButtonHeldTime() const;
+  // Electrical side-button levels before the DigitalTwoButton click/hold mapping.
+  // Reports false levels on other input styles.
+  void readPhysicalSideButtons(bool& up, bool& down) const;
   bool hasTouch() const;
   // Capacitive Home key reported by the touch controller (X4 Pro). The tap
   // event fires on release and excludes a long hold.

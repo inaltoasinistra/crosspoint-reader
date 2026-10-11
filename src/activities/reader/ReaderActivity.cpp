@@ -146,7 +146,7 @@ void ReaderActivity::loop() {
   if (handleBackNavigation()) return;
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
-  auto [prevTriggered, nextTriggered, fromTilt] = ReaderUtils::detectPageTurn(mappedInput);
+  auto [prevTriggered, nextTriggered, fromTilt, fromSidePress] = ReaderUtils::detectPageTurn(mappedInput);
   prevTriggered = prevTriggered || touch.prev;
   nextTriggered = nextTriggered || touch.next;
   if (!prevTriggered && !nextTriggered) return;
@@ -156,20 +156,34 @@ void ReaderActivity::loop() {
   const bool skip =
       !fromTilt && SETTINGS.longPressButtonBehavior == SETTINGS.CHAPTER_SKIP && heldMs >= ReaderUtils::SKIP_HOLD_MS;
 
-  if (prevTriggered) {
-    if (skip) {
-      skipPages(-10);
-    } else {
-      pageTurn(false);
-    }
+  if (skip) {
+    skipPages(prevTriggered ? -10 : 10);
+    sidePressTurn.valid = false;
   } else {
-    if (skip) {
-      skipPages(10);
-    } else {
-      pageTurn(true);
-    }
+    const bool turned = pageTurn(!prevTriggered);
+    recordTurn(!prevTriggered, fromSidePress && turned);
   }
   requestUpdate();
+}
+
+void ReaderActivity::recordTurn(const bool forward, const bool fromSidePress) {
+  sidePressTurn.valid = false;
+  if (fromSidePress) sidePressTurn.record(forward, millis());
+}
+
+bool ReaderActivity::revertChordPageTurn() {
+  cancelPendingSidePressTurn();
+  const bool undo = sidePressTurn.shouldUndo(millis());
+  sidePressTurn.valid = false;
+  if (!undo) return false;
+  // A forward turn off the last page opened the end-of-book screen; prev from there returns to the book.
+  if (isAtEndOfBook()) {
+    onReturnFromEndOfBook();
+  } else {
+    pageTurn(!sidePressTurn.forward);
+  }
+  requestUpdate();
+  return true;
 }
 
 void ReaderActivity::render(RenderLock&&) {

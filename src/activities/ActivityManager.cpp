@@ -345,6 +345,14 @@ bool ActivityManager::isReaderActivity() const {
          (currentActivity && currentActivity->isReaderActivity());
 }
 
+bool ActivityManager::isReaderInForeground() const { return currentActivity && currentActivity->isReaderActivity(); }
+
+bool ActivityManager::revertChordPageTurn() { return currentActivity && currentActivity->revertChordPageTurn(); }
+
+void ActivityManager::onControlsLocked() {
+  if (currentActivity) currentActivity->onControlsLocked();
+}
+
 bool ActivityManager::handleForcedRefresh() { return currentActivity && currentActivity->handleForcedRefresh(); }
 
 bool ActivityManager::skipLoopDelay() const { return currentActivity && currentActivity->skipLoopDelay(); }

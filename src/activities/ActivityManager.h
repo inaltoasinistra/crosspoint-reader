@@ -104,6 +104,10 @@ class ActivityManager {
   bool preventAutoSleep() const;
   bool requiresExclusiveStorageLoop() const;
   bool isReaderActivity() const;
+  // A reader is the activity on screen, not just somewhere on the stack (e.g. under its menu).
+  bool isReaderInForeground() const;
+  bool revertChordPageTurn();
+  void onControlsLocked();
   bool handleForcedRefresh();
   bool skipLoopDelay() const;
   ScreenshotInfo getScreenshotInfo() const;
