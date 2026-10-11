@@ -186,7 +186,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     TILT_DETECTION_COUNT
   };
 
-  // UNTIL_SLEEP starts every power-on session with tilt disarmed until the long-press action arms it.
+  // UNTIL_SLEEP starts every power-on session with tilt disarmed until the long-press action, or picking a
+  // Tilt Page Turn direction in settings, arms it; under ALWAYS the same long press pauses tilt until the next sleep.
   enum TILT_ACTIVATION { TILT_ALWAYS = 0, TILT_UNTIL_SLEEP = 1, TILT_ACTIVATION_COUNT };
 
   enum TOUCH_READER_CONTROLS {

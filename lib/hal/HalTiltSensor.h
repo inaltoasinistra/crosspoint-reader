@@ -33,8 +33,9 @@ class HalTiltSensor {
   uint8_t _detection = CrossPointTiltDetection::RATE;  // Detector is reset when this changes
 
   TiltSession _session;
-  // Session is restarted when this changes; the sentinel makes the first update() start it.
-  uint8_t _activation = 0xFF;
+  // The first sync (at boot) starts the session; later changes come from the user's settings.
+  static constexpr uint8_t ACTIVATION_UNSET = 0xFF;
+  uint8_t _activation = ACTIVATION_UNSET;
 
   bool _tiltForwardEvent = false;  // Consumed by wasTiltedForward()
   bool _tiltBackEvent = false;     // Consumed by wasTiltedBack()
@@ -71,9 +72,15 @@ class HalTiltSensor {
   void update(const uint8_t mode, const uint8_t detection, const uint8_t activation, const uint8_t orientation,
               const bool inReader);
 
+  // Restart the session when the activation setting changes (CrossPointTiltActivation).
+  // Called once settings are loaded so the first render already sees the right session state.
+  void syncActivation(uint8_t activation);
+
   // Arm or disarm tilt for the rest of this power-on session. Returns the new state.
   bool toggleSession();
-  bool isSessionEnabled() const { return _session.isEnabled(); }
+  // mode: CrossPointTiltPageTurn. Derived from settings and session rather than the IMU power
+  // state, so it is already correct on the render that follows a toggle.
+  bool isTiltActive(const uint8_t mode) const { return _available && _session.isActive(mode); }
 
   // Returns true once per tilt-forward gesture (next page direction).
   // Consumed on read — subsequent calls return false until next gesture.

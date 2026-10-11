@@ -82,9 +82,9 @@ void HalTiltSensor::update(uint8_t mode, const uint8_t detection, const uint8_t 
     return;
   }
 
-  if (activation != _activation) {
-    _activation = activation;
-    _session.begin(activation == CrossPointTiltActivation::UNTIL_SLEEP);
+  syncActivation(activation);
+  if (_session.observeMode(mode)) {
+    LOG_INF("GYR", "Tilt session armed from settings");
   }
   // A disarmed session behaves exactly like TILT_OFF, so the IMU sleeps and can't
   // turn pages or hold the device awake while it is carried around.
@@ -177,6 +177,19 @@ bool HalTiltSensor::hadActivity() {
   const bool val = _hadActivity;
   _hadActivity = false;
   return val;
+}
+
+void HalTiltSensor::syncActivation(const uint8_t activation) {
+  if (activation == _activation) {
+    return;
+  }
+  const bool perSession = activation == CrossPointTiltActivation::UNTIL_SLEEP;
+  if (_activation == ACTIVATION_UNSET) {
+    _session.begin(perSession);
+  } else {
+    _session.changeActivation(perSession);
+  }
+  _activation = activation;
 }
 
 bool HalTiltSensor::toggleSession() {

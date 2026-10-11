@@ -300,7 +300,7 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - "KOSync" - Hold Confirm (~1 second) to launch KOReader sync directly.
   - "Dictionary" - Hold Confirm (~0.4 second) to start dictionary word selection on the current page (see [docs/dictionary.md](docs/dictionary.md)).
   - "Tilt page turn" (Xteink X3 only) - Hold Confirm (~0.4 second) to turn tilt page turning on or off until the
-    device sleeps (see **Tilt Activation** below).
+    device sleeps, in both **Tilt Activation** modes (see below).
   - "Disabled" - Long-press is ignored; only short-press opens the reader menu.
 
 - **Short Power Button Click**: Controls the effect of a short click of the power button:
@@ -608,12 +608,20 @@ On the **Xteink X3**, the gyroscope can be used to turn pages by tilting the dev
   the reading position.
 
 **Tilt Activation** controls when tilt page turning is live:
-- **Always**: tilt works whenever Tilt Page Turn is on.
+- **Always**: tilt works whenever Tilt Page Turn is on. If **Long-press Menu** is set to **Tilt page turn**,
+  long-pressing Confirm while reading pauses tilt; long-press again to resume it. A pause lasts until the device
+  sleeps: after waking up tilt is on again.
 - **Until sleep**: every time the device starts or wakes up, tilt is off, so pages cannot turn while the device is
   carried around (for example after an accidental power-on in a bag). To turn it on for the current reading session,
   set **Long-press Menu** to **Tilt page turn** and long-press Confirm while reading. Long-press again to turn it
-  off. It turns off by itself when the device goes to sleep. While it is on, a tilt icon is shown in the status bar
-  (when the status bar shows text).
+  off. Choosing **Normal** or **Inverted** for **Tilt Page Turn**, or switching **Tilt Activation** to
+  **Until sleep**, also turns it on for the current session. Either way it turns off by itself when the device goes
+  to sleep; the chosen direction is kept for next time.
+
+While tilt page turning is on, a tilt icon is shown in the status bar (when the status bar shows text) if tilt can be
+off while configured on: in **Until sleep** mode, or when **Long-press Menu** is set to **Tilt page turn**. With
+**Always** and another long-press action, tilt being on is the normal state and no icon is shown. When Tilt Page Turn
+is Off, the long press does nothing.
 
 ### Footnote Navigation
 

@@ -45,10 +45,12 @@ void drawStatusIcon(const GfxRenderer& renderer, const uint8_t* icon, const int 
   }
 }
 
-// Only "Until sleep" gets an icon: in "Always" mode tilt being live is the normal state.
-bool tiltSessionIconVisible() {
-  return SETTINGS.tiltActivation == CrossPointSettings::TILT_UNTIL_SLEEP &&
-         SETTINGS.tiltPageTurn != CrossPointSettings::TILT_OFF && halTiltSensor.isSessionEnabled();
+// Shown only where tilt can be off while configured on; with "Always" and no tilt long press,
+// tilt being live is the normal state and needs no indicator.
+bool tiltIconVisible() {
+  const bool toggleable = SETTINGS.tiltActivation == CrossPointSettings::TILT_UNTIL_SLEEP ||
+                          SETTINGS.longPressMenuFunction == CrossPointSettings::LP_MENU_TILT;
+  return toggleable && halTiltSensor.isTiltActive(SETTINGS.tiltPageTurn);
 }
 
 }  // namespace
@@ -843,7 +845,7 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
   }
 
   // Draw Tilt Session
-  if (showStatusBarTextLane && tiltSessionIconVisible()) {
+  if (showStatusBarTextLane && tiltIconVisible()) {
     const int tiltGap = leftClusterWidth > 0 ? statusIconGap : 0;
     drawStatusIcon(renderer, TiltStatusIcon, leftClusterX + leftClusterWidth + tiltGap, textY + 5);
     leftClusterWidth += statusIconWidth + tiltGap;
