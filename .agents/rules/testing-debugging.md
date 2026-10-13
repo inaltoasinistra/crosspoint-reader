@@ -71,7 +71,9 @@ the change before handoff.
 
 Use `python3 scripts/debugging_monitor.py` for enhanced logs or
 `pio device monitor` / the IDE monitor. Device access and measurements remain
-within the authorized task.
+within the authorized task. To drive a connected device (inject buttons,
+capture screenshots), use `scripts/device_ctl.py` through the `device-test`
+skill.
 
 ### Live Debugging Patterns
 
