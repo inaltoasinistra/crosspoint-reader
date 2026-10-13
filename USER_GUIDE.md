@@ -754,7 +754,7 @@ python3 scripts/debugging_monitor.py COM7                # Windows
 - Color-coded log output by category (errors, memory, display, EPUB parsing, etc.)
 - Live memory usage graph (free RAM, total RAM, max contiguous allocation) updated every second
 - Interactive command prompt — type a command and press Enter to send it to the device
-- Screenshot capture — saves the current display to `screenshot.bmp` when triggered by the device
+- Screenshot capture — type `SCREENSHOT` at the prompt to save the current display to `screenshot.png` (development builds only)
 
 **Options:**
 

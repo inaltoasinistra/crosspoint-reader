@@ -88,3 +88,5 @@ add_subdirectory(protected_paths)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME TrustedTimeTimezone COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_trusted_time.py)
+add_test(NAME ScreenshotCodecHost COMMAND ${Python3_EXECUTABLE} ${REPO_ROOT}/scripts/tests/test_screenshot_codec.py)
+add_test(NAME DeviceCtlHost COMMAND ${Python3_EXECUTABLE} ${REPO_ROOT}/scripts/tests/test_device_ctl.py)

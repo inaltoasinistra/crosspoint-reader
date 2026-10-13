@@ -77,7 +77,6 @@ PACKAGE_MAPPING: dict[str, str] = {
     "serial": "pyserial",
     "colorama": "colorama",
     "matplotlib": "matplotlib",
-    "PIL": "Pillow",
 }
 
 try:
@@ -85,11 +84,6 @@ try:
     import serial
     from colorama import Fore, Style, init
     from matplotlib import animation
-
-    try:
-        from PIL import Image
-    except ImportError:
-        Image = None
 except ImportError as e:
     ERROR_MSG = str(e).lower()
     missing_packages = [pkg for mod, pkg in PACKAGE_MAPPING.items() if mod in ERROR_MSG]
@@ -108,6 +102,8 @@ except ImportError as e:
 
     print("\nExiting...")
     sys.exit(1)
+
+import screenshot_codec  # noqa: E402  (stdlib-only sibling; after the dependency check)
 
 # --- Global Variables for Data Sharing ---
 # Store last 50 data points
@@ -236,6 +232,17 @@ def parse_memory_line(line: str) -> tuple[int | None, int | None, int | None]:
     )
 
 
+def save_screenshot(header: screenshot_codec.Header, payload: bytes) -> None:
+    """Saves a capture as the device shows it in its default portrait orientation."""
+    try:
+        bitmap = screenshot_codec.decode(header, payload, None)
+    except screenshot_codec.CodecError as error:
+        print(f"{Fore.RED}Screenshot failed: {error}{Style.RESET_ALL}")
+        return
+    screenshot_codec.write_png(screenshot_codec.to_logical(bitmap, screenshot_codec.PORTRAIT), "screenshot.png")
+    print(f"{Fore.GREEN}Screenshot saved to screenshot.png{Style.RESET_ALL}")
+
+
 def serial_worker(ser, kwargs: dict[str, str]) -> None:
     """
     Runs in a background thread. Handles reading serial data, printing to console,
@@ -261,31 +268,18 @@ def serial_worker(ser, kwargs: dict[str, str]) -> None:
         )
 
     expecting_screenshot = False
-    screenshot_size = 0
+    screenshot_header = None
     screenshot_data = b""
 
     try:
         while not shutdown_event.is_set():
             if expecting_screenshot:
-                data = ser.read(screenshot_size - len(screenshot_data))
+                data = ser.read(screenshot_header.payload_bytes - len(screenshot_data))
                 if not data:
                     continue
                 screenshot_data += data
-                if len(screenshot_data) == screenshot_size:
-                    if Image:
-                        img = Image.frombytes("1", (800, 480), screenshot_data)
-                        # We need to rotate the image because the raw data is in landscape mode
-                        img = img.transpose(Image.ROTATE_270)
-                        img.save("screenshot.bmp")
-                        print(
-                            f"{Fore.GREEN}Screenshot saved to screenshot.bmp{Style.RESET_ALL}"
-                        )
-                    else:
-                        with open("screenshot.raw", "wb") as f:
-                            f.write(screenshot_data)
-                        print(
-                            f"{Fore.GREEN}Screenshot saved to screenshot.raw (PIL not available){Style.RESET_ALL}"
-                        )
+                if len(screenshot_data) == screenshot_header.payload_bytes:
+                    save_screenshot(screenshot_header, screenshot_data)
                     expecting_screenshot = False
                     screenshot_data = b""
             else:
@@ -299,11 +293,14 @@ def serial_worker(ser, kwargs: dict[str, str]) -> None:
                     if not clean_line:
                         continue
 
-                    if clean_line.startswith("SCREENSHOT_START:"):
-                        screenshot_size = int(clean_line.split(":")[1])
-                        expecting_screenshot = True
+                    if clean_line.startswith(screenshot_codec.START_PREFIX):
+                        try:
+                            screenshot_header = screenshot_codec.parse_header(clean_line)
+                            expecting_screenshot = True
+                        except screenshot_codec.CodecError as error:
+                            print(f"{Fore.RED}{error}{Style.RESET_ALL}")
                         continue
-                    elif clean_line == "SCREENSHOT_END":
+                    elif clean_line.startswith(screenshot_codec.END_PREFIX):
                         continue  # ignore
 
                     # Add PC timestamp
