@@ -117,6 +117,11 @@ class HalGPIO {
   bool wasTouchActivity() const;
   void setSharedConfirmPowerShortPressEmitsPower(bool enabled);
 
+  // ORs source()'s mask of BTN_* bits into every raw button sample, before
+  // debounce, so injected presses take the same path as real contacts. The
+  // SDK has a single hook slot; returns false on boards that already use it.
+  bool setInjectedButtonSource(uint8_t (*source)());
+
   // Verify that the physical power button remains held through input debounce.
   // Returns true if verification succeeded, false if device should return to sleep.
   // Should only be called when wakeup reason is PowerButton.

@@ -119,6 +119,14 @@ void HalGPIO::update() {
 
 bool HalGPIO::wasUsbStateChanged() const { return usbStateChanged; }
 
+bool HalGPIO::setInjectedButtonSource(uint8_t (*source)()) {
+  // T5S3 routes its extra button through the hook; replacing it would
+  // silently disable that button.
+  if (BoardConfig::ACTIVE.board == BoardConfig::Board::LilyGoT5S3) return false;
+  InputManager::setButtonHook(source);
+  return true;
+}
+
 bool HalGPIO::isPressed(uint8_t buttonIndex) const { return inputMgr.isPressed(buttonIndex); }
 
 void HalGPIO::prepareForDeepSleep() {
