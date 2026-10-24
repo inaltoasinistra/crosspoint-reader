@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "ControlsLock.h"
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "components/icons/cover.h"
@@ -48,8 +49,8 @@ int coverWidth = 0;
 
 void RoundedRaffTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* title, const char* subtitle,
                                   const bool backButton) const {
-  // Home screen header is custom-rendered in drawRecentBookCover.
-  if (title == nullptr) {
+  // Untitled Home omits the header except when its status strip must show the lock.
+  if (title == nullptr && !controlsLocked) {
     return;
   }
   BaseTheme::drawHeader(renderer, rect, title, subtitle, backButton);

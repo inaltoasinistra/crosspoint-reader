@@ -11,6 +11,7 @@
 #include <cctype>
 #include <cstdio>
 
+#include "ControlsLock.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "EpubReaderActivity.h"
@@ -18,6 +19,7 @@
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
 #include "XtcReaderActivity.h"
+#include "components/UITheme.h"
 #include "util/PluginEvents.h"
 
 ReaderActivity::ReaderActivity(const char* name, GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -279,6 +281,11 @@ void ReaderActivity::render(RenderLock&&) {
       // observe an object whose names/selector are still being populated.
       endOfBookOptionsReady.store(true, std::memory_order_release);
       endOfBookOptions->render(renderer, mappedInput);
+    }
+    if (controlsLocked) {
+      const auto& metrics = UITheme::getInstance().getMetrics();
+      GUI.drawHeader(renderer, Rect{0, metrics.topPadding, renderer.getScreenWidth(), metrics.headerHeight}, nullptr,
+                     nullptr, false);
     }
     renderer.displayBuffer();
     onEndOfBookRendered();

@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <string>
 
+#include "ControlsLock.h"
 #include "I18n.h"
 #include "RecentBooksStore.h"
 #include "clippings/SelectionGeometry.h"
@@ -24,6 +25,7 @@
 #include "components/icons/bookmark.h"
 #include "components/icons/cover.h"
 #include "components/icons/headerIcons.h"
+#include "components/icons/lock.h"
 #include "fontIds.h"
 
 void BaseTheme::setCheckboxRow(freeink::ui::ListItem& item, const bool checked) {
@@ -37,16 +39,17 @@ namespace {
 constexpr int homeMenuMargin = 20;
 constexpr int homeMarginTop = 30;
 constexpr int subtitleY = 738;
-constexpr int bookmarkStatusIconWidth = 16;
-constexpr int bookmarkStatusIconHeight = 14;
-constexpr int bookmarkStatusIconGap = 4;
-constexpr int bookmarkStatusIconTopCrop = 2;
+// Status bar icons are 16x16 bitmaps drawn with their top rows cropped to fit the text lane.
+constexpr int statusIconWidth = 16;
+constexpr int statusIconHeight = 14;
+constexpr int statusIconGap = 4;
+constexpr int statusIconTopCrop = 2;
 
-void drawBookmarkStatusIcon(const GfxRenderer& renderer, const int x, const int y) {
-  constexpr int bytesPerRow = bookmarkStatusIconWidth / 8;
-  for (int row = 0; row < bookmarkStatusIconHeight; ++row) {
-    for (int col = 0; col < bookmarkStatusIconWidth; ++col) {
-      const uint8_t byte = BookmarkStatusIcon[(row + bookmarkStatusIconTopCrop) * bytesPerRow + col / 8];
+void drawStatusIcon(const GfxRenderer& renderer, const uint8_t* icon, const int x, const int y) {
+  constexpr int bytesPerRow = statusIconWidth / 8;
+  for (int row = 0; row < statusIconHeight; ++row) {
+    for (int col = 0; col < statusIconWidth; ++col) {
+      const uint8_t byte = icon[(row + statusIconTopCrop) * bytesPerRow + col / 8];
       const uint8_t mask = 1U << (7 - (col % 8));
       renderer.drawPixel(x + col, y + row, (byte & mask) != 0);
     }
@@ -457,7 +460,27 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
     props.styles.normal.border = fui::Paint::solid(fui::Color::Black);
     props.styles.normal.borderWidth = tokens.headerUnderline;
   }
+  if (controlsLocked && rect.height < UITheme::getInstance().getMetrics().headerHeight) {
+    if (props.status.batteryLeft) {
+      props.leftReserve = statusIconWidth + statusIconGap;
+    } else {
+      props.rightReserve = statusIconWidth + statusIconGap;
+    }
+  }
   fui::header(ui.frame, band, props);
+  if (controlsLocked) {
+    const auto& status = props.status;
+    // Match FreeInkUI's fixed-corner battery reserve; header() does not expose
+    // the battery rect to callers.
+    const int labelWidth = status.battery.label ? renderer.getTextWidth(SMALL_FONT_ID, status.battery.label) : 0;
+    const int batteryWidth =
+        status.battery.glyphWidth + 2 + (status.battery.label ? status.battery.gap + labelWidth : 0);
+    const int iconX = status.batteryLeft
+                          ? band.x + status.edgeInset + batteryWidth + statusIconGap
+                          : band.x + band.width - status.edgeInset - batteryWidth - statusIconGap - statusIconWidth;
+    const int iconY = band.y + std::max(0, (status.stripHeight - statusIconHeight) / 2);
+    drawStatusIcon(renderer, LockStatusIcon, iconX, iconY);
+  }
 }
 
 void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {
@@ -905,14 +928,14 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
     }
   }
 
-  // Draw Bookmark
-  if (showStatusBarTextLane && isPageBookmarked) {
-    const int bookmarkGap = leftClusterWidth > 0 ? bookmarkStatusIconGap : 0;
-    const int bookmarkX = leftClusterX + leftClusterWidth + bookmarkGap;
-    const int bookmarkY = textY + 5;
-    drawBookmarkStatusIcon(renderer, bookmarkX, bookmarkY);
-    leftClusterWidth += bookmarkStatusIconWidth + bookmarkGap;
-  }
+  // Draw Bookmark and Controls Lock
+  const auto drawLeftStatusIcon = [&](const uint8_t* icon) {
+    const int gap = leftClusterWidth > 0 ? statusIconGap : 0;
+    drawStatusIcon(renderer, icon, leftClusterX + leftClusterWidth + gap, textY + 5);
+    leftClusterWidth += statusIconWidth + gap;
+  };
+  if (showStatusBarTextLane && isPageBookmarked) drawLeftStatusIcon(BookmarkStatusIcon);
+  if (showStatusBarTextLane && controlsLocked) drawLeftStatusIcon(LockStatusIcon);
 
   // Draw Title
   if (!title.empty()) {

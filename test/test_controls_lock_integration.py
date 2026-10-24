@@ -57,6 +57,16 @@ class TestControlsLockIntegration(unittest.TestCase):
         loop = method_body("src/main.cpp", "void loop() {", "// Under the render lock")
         self.assertIn("activityManager.acceptsControlsLock() && controlsLocked", loop)
 
+    def test_home_header_draws_lock_beside_battery(self) -> None:
+        header = method_body("src/components/themes/BaseTheme.cpp", "void BaseTheme::drawHeader(",
+                             "void BaseTheme::drawSubHeader(")
+        self.assertIn("if (controlsLocked)", header)
+        self.assertIn("status.battery.glyphWidth", header)
+        self.assertIn("drawStatusIcon(renderer, LockStatusIcon, iconX, iconY)", header)
+        rounded = method_body("src/components/themes/roundedraff/RoundedRaffTheme.cpp",
+                              "void RoundedRaffTheme::drawHeader(", "void RoundedRaffTheme::drawRecentBookCover(")
+        self.assertIn("title == nullptr && !controlsLocked", rounded)
+
     def test_chapter_boundary_chord_restores_original_page(self) -> None:
         body = method_body("src/activities/reader/EpubReaderActivity.cpp", "bool EpubReaderActivity::restoreChordTurnStart(",
                            "void EpubReaderActivity::onControlsLocked()")

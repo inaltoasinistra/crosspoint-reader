@@ -665,6 +665,7 @@ gesture. On Home and while reading, this combination locks/unlocks instead of sl
 without turning a page or opening a menu.
 
 While locked:
+- a lock icon appears in the reader status bar (when it shows text) or beside the battery in Home and shared headers;
 - page buttons, touch, gyroscope tilt turns, most short Power actions and the screenshot combination are ignored;
 - Bluetooth controls, including navigation and reader shortcuts, remain available; timed automatic turns continue;
 - a long press of Power still puts the device to sleep;
