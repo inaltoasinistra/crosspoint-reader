@@ -46,6 +46,7 @@ class MappedInputManager {
   // Home-key actions so the next main-loop pass can dispatch them, while the
   // current action remains available for immediate Home cancellation.
   void update(bool deferHomeButtonAction = false) const;
+  void setInputBlocked(const bool blocked) { inputBlocked = blocked; }
 #if FREEINK_CAP_TOUCH
   // X4 Pro delays a single power click until its frontlight double-click window
   // expires. The main loop supplies that one-frame event here.
@@ -97,8 +98,11 @@ class MappedInputManager {
   // is intentionally unused. Other boards retain the bottom-edge Home gesture.
   // The reader menu remains on its existing top-edge gesture and middle tap.
   bool wasHomeGesture() const;
+  bool wasHomeKeyHold() const;
+  bool wasAnyPressed() const;
+  bool wasAnyReleased() const;
   // Configured one-frame action, independent of the gesture that triggered it.
-  HomeButtonAction homeButtonAction() const { return homeAction; }
+  HomeButtonAction homeButtonAction() const { return inputBlocked ? HomeButtonAction::Ignore : homeAction; }
   void resetHomeButtonInput() const {
     homeButtonInput.reset();
     deferredHomeAction = HomeButtonAction::Ignore;
@@ -155,6 +159,7 @@ class MappedInputManager {
   mutable HomeButtonInput homeButtonInput;
   mutable HomeButtonAction homeAction = HomeButtonAction::Ignore;
   mutable HomeButtonAction deferredHomeAction = HomeButtonAction::Ignore;
+  bool inputBlocked = false;
   mutable bool touchHeldOverrideValid = false;
   mutable unsigned long touchHeldOverrideMs = 0;
   mutable unsigned long touchHeldOverrideAt = 0;

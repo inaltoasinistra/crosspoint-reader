@@ -223,7 +223,7 @@ void ReaderActivity::loop() {
   if (handleBackNavigation()) return;
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
-  auto [prevTriggered, nextTriggered, fromTilt] = ReaderUtils::detectPageTurn(mappedInput);
+  auto [prevTriggered, nextTriggered, fromTilt, fromSidePress] = ReaderUtils::detectPageTurn(mappedInput);
   prevTriggered = prevTriggered || touch.prev;
   nextTriggered = nextTriggered || touch.next;
   if (!prevTriggered && !nextTriggered) return;
@@ -233,11 +233,37 @@ void ReaderActivity::loop() {
   const bool skip =
       !fromTilt && SETTINGS.longPressButtonBehavior == SETTINGS.CHAPTER_SKIP && heldMs >= ReaderUtils::SKIP_HOLD_MS;
 
+  if (fromSidePress && !skip) captureChordTurnStart();
   const bool changed = skip ? skipPages(prevTriggered ? -10 : 10) : pageTurn(!prevTriggered);
   // A skip is navigation, not reading: it never counts toward session dwell.
   notePageTurn(!skip && !prevTriggered, changed);
   if (changed && (touch.prev || touch.next)) haptic_feedback::touchAction(skip);
+  if (skip) {
+    sidePressTurn.valid = false;
+  } else {
+    recordTurn(!prevTriggered, fromSidePress && changed);
+  }
   requestUpdate();
+}
+
+void ReaderActivity::recordTurn(const bool forward, const bool fromSidePress) {
+  sidePressTurn.valid = false;
+  if (fromSidePress) sidePressTurn.record(forward, millis());
+}
+
+bool ReaderActivity::revertChordPageTurn(const bool scheduleUpdate) {
+  cancelPendingSidePressTurn();
+  const bool undo = sidePressTurn.shouldUndo(millis());
+  sidePressTurn.valid = false;
+  if (!undo) return false;
+  // A forward turn off the last page opened the end-of-book screen; prev from there returns to the book.
+  if (isAtEndOfBook()) {
+    onReturnFromEndOfBook();
+  } else {
+    if (!restoreChordTurnStart(sidePressTurn.forward)) return false;
+  }
+  if (scheduleUpdate) requestUpdate();
+  return true;
 }
 
 void ReaderActivity::render(RenderLock&&) {

@@ -153,10 +153,42 @@ void checkRouting(MappedInputManager& input) {
   }
   manager.context = false;
   assert(!manager.remoteTurn(true, false));
+  manager.context = true;
+  manager.foregroundReader = true;
+  manager.currentActivity->menu = false;
 }
 int main() {
 """)
 harness = harness.replace("  using Button =", "  checkRouting(input);\n  using Button =")
+harness = harness.replace("  using Button = MappedInputManager::Button;", r"""
+  using Button = MappedInputManager::Button;
+  SETTINGS.shortPwrBtn = CrossPointSettings::PWR_BOOKMARK;
+  gpio.button = static_cast<uint8_t>(Button::Power);
+  gpio.released = true;
+  input.update();
+  assert(input.homeButtonAction() == HomeButtonAction::Bookmark);
+  input.setInputBlocked(true);
+  assert(input.homeButtonAction() == HomeButtonAction::Ignore);
+  assert(!input.wasReleased(Button::Power));
+  gpio.button = static_cast<uint8_t>(Button::Confirm);
+  gpio.pressed = true;
+  assert(!input.wasPressed(Button::Confirm));
+  gpio.pressed = false;
+  gpio.released = true;
+  assert(!input.wasReleased(Button::Confirm));
+  gpio.released = false;
+  input.update();
+  gpio.pressed = true;
+  assert(input.injectRemoteClick(RemoteButton::Next));
+  assert(input.wasPressed(Button::NavNext) && input.wasReleased(Button::NavNext));
+  assert(!input.wasPressed(Button::Power));
+  gpio.pressed = false;
+  input.setInputBlocked(false);
+  gpio.pressed = true;
+  assert(input.wasPressed(Button::Confirm));
+  gpio.pressed = false;
+  SETTINGS.shortPwrBtn = CrossPointSettings::IGNORE;
+""")
 with tempfile.TemporaryDirectory() as directory:
     directory = Path(directory)
     (directory / "HalGPIO.h").write_text(stub)

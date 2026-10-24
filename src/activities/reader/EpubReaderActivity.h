@@ -25,6 +25,9 @@ class EpubReaderActivity final : public ReaderActivity {
   std::unique_ptr<Section> section = nullptr;
   int currentSpineIndex = 0;
   int nextPageNumber = 0;
+  int chordStartSpineIndex = 0;
+  int chordStartPage = 0;
+  bool pendingTurnFromRemote = false;
   std::optional<uint16_t> pendingPageJump;
   std::string pendingAnchor;
   int cachedSpineIndex = 0;
@@ -36,6 +39,7 @@ class EpubReaderActivity final : public ReaderActivity {
   unsigned long pageTurnDuration = 0UL;
   int8_t pendingManualTurn = 0;
   bool pendingManualTurnTouch = false;
+  bool pendingTurnFromSidePress = false;
   bool pendingPercentJump = false;
   float pendingSpineProgress = 0.0f;
   bool pendingScreenshot = false;
@@ -243,6 +247,9 @@ class EpubReaderActivity final : public ReaderActivity {
   int getProgressBasisPoints() const override;
   void renderBook() override;
   void onEndOfBookRendered() override;
+  void cancelPendingSidePressTurn() override;
+  void captureChordTurnStart() override;
+  bool restoreChordTurnStart(bool forward) override;
 
  public:
   explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string bookPath,
@@ -252,6 +259,7 @@ class EpubReaderActivity final : public ReaderActivity {
 
   void loop() override;
   void render(RenderLock&& lock) override;
+  void onControlsLocked() override;
 
   bool pageTurn(bool isForward) override;
   bool skipPages(int amount) override;

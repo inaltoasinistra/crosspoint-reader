@@ -50,6 +50,8 @@ class Activity {
   virtual bool requiresExclusiveStorageLoop() const { return false; }
   virtual bool isReaderActivity() const { return false; }
   virtual bool acceptsRemoteInput() const { return false; }
+  virtual bool revertChordPageTurn(bool) { return false; }
+  virtual void onControlsLocked() {}
   // Returns true when the activity schedules its own forced refresh.
   virtual bool handleForcedRefresh() { return false; }
   virtual bool isHomeActivity() const { return false; }

@@ -146,6 +146,14 @@ unsigned long HalGPIO::getHeldTime() const { return inputMgr.getHeldTime(); }
 
 unsigned long HalGPIO::getPowerButtonHeldTime() const { return inputMgr.getPowerButtonHeldTime(); }
 
+void HalGPIO::readPhysicalSideButtons(bool& up, bool& down) const {
+  up = down = false;
+  if (BoardConfig::ACTIVE.inputStyle != BoardConfig::InputStyle::DigitalTwoButton) return;
+  const auto& pins = BoardConfig::ACTIVE.input;
+  up = pins.up >= 0 && digitalRead(pins.up) == LOW;
+  down = pins.down >= 0 && digitalRead(pins.down) == LOW;
+}
+
 bool HalGPIO::hasTouch() const { return inputMgr.hasTouch(); }
 
 bool HalGPIO::hasHomeKey() const { return BoardConfig::hasHomeKey(); }

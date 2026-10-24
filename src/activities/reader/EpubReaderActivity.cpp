@@ -968,15 +968,19 @@ void EpubReaderActivity::loop() {
     }
     const bool forward = pendingManualTurn > 0;
     pendingManualTurn = 0;
+    if (pendingTurnFromSidePress) captureChordTurnStart();
     const bool succeeded = pageTurn(forward);
     notePageTurn(forward, succeeded);
     if (succeeded && pendingManualTurnTouch) haptic_feedback::touchAction();
     pendingManualTurnTouch = false;
+    recordTurn(forward, pendingTurnFromSidePress && succeeded);
+    pendingTurnFromSidePress = false;
+    pendingTurnFromRemote = false;
     requestUpdate();
     return;
   }
 
-  auto [prevTriggered, nextTriggered, fromTilt] = ReaderUtils::detectPageTurn(mappedInput);
+  auto [prevTriggered, nextTriggered, fromTilt, fromSidePress] = ReaderUtils::detectPageTurn(mappedInput);
   prevTriggered = prevTriggered || touch.prev;
   nextTriggered = nextTriggered || touch.next;
   if (!prevTriggered && !nextTriggered) {
@@ -986,11 +990,6 @@ void EpubReaderActivity::loop() {
   }
 
   if (handleEndOfBookPageTurn(prevTriggered, nextTriggered)) {
-    return;
-  }
-
-  if (mappedInput.wasReleased(MappedInputManager::Button::Power) &&
-      mappedInput.wasReleased(MappedInputManager::Button::Down)) {
     return;
   }
 
@@ -1022,13 +1021,48 @@ void EpubReaderActivity::loop() {
   if (turnGuardActive) {
     pendingManualTurn = prevTriggered ? -1 : 1;
     pendingManualTurnTouch = touch.prev || touch.next;
+    pendingTurnFromSidePress = fromSidePress;
+    pendingTurnFromRemote = !fromTilt && mappedInput.hasRemoteClick();
     return;
   }
 
+  if (fromSidePress) captureChordTurnStart();
   const bool succeeded = pageTurn(!prevTriggered);
   notePageTurn(!prevTriggered, succeeded);
   if (succeeded && (touch.prev || touch.next)) haptic_feedback::touchAction();
+  recordTurn(!prevTriggered, fromSidePress && succeeded);
   requestUpdate();
+}
+
+void EpubReaderActivity::cancelPendingSidePressTurn() {
+  if (pendingTurnFromSidePress) pendingManualTurn = 0;
+}
+
+void EpubReaderActivity::captureChordTurnStart() {
+  if (!section) return;
+  chordStartSpineIndex = currentSpineIndex;
+  chordStartPage = section->currentPage;
+}
+
+bool EpubReaderActivity::restoreChordTurnStart(const bool forward) {
+  if (currentSpineIndex == chordStartSpineIndex) return pageTurn(!forward);
+  // Crossing a chapter discards the old section before the chord can finish.
+  // Reload that chapter at the page recorded before the side-button press.
+  RenderLock lock;
+  clearDeferredReposition();
+  currentSpineIndex = chordStartSpineIndex;
+  nextPageNumber = chordStartPage;
+  pendingPageJump.reset();
+  section.reset();
+  return true;
+}
+
+void EpubReaderActivity::onControlsLocked() {
+  if (!pendingTurnFromRemote) {
+    pendingManualTurn = 0;
+    pendingManualTurnTouch = false;
+    pendingTurnFromSidePress = false;
+  }
 }
 
 void EpubReaderActivity::jumpToPercent(int percent) {

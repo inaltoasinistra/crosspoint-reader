@@ -107,6 +107,7 @@ MappedInputManager::Button MappedInputManager::mapScreenDirection(const Button b
 }
 
 bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint8_t) const) const {
+  if (inputBlocked) return false;
   const auto sideLayout = SETTINGS.sideButtonLayout;
 
   switch (button) {
@@ -192,6 +193,7 @@ void MappedInputManager::rememberTouchHeldTime() const {
 }
 
 bool MappedInputManager::wasScreenTapped(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   if (!gpio.wasTouchTap(nx, ny)) return false;
@@ -209,6 +211,7 @@ bool MappedInputManager::wasScreenTapped(int& x, int& y) const {
 }
 
 bool MappedInputManager::wasScreenTouchPressed(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   if (!gpio.wasTouchDown(nx, ny)) return false;
@@ -217,6 +220,7 @@ bool MappedInputManager::wasScreenTouchPressed(int& x, int& y) const {
 }
 
 bool MappedInputManager::wasScreenTouchDown(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   unsigned long heldMs = 0;
@@ -227,6 +231,7 @@ bool MappedInputManager::wasScreenTouchDown(int& x, int& y) const {
 }
 
 bool MappedInputManager::wasScreenLongPress(int& x, int& y) const {
+  if (inputBlocked) return false;
   float nx = 0.0f;
   float ny = 0.0f;
   if (!gpio.wasTouchLongPress(nx, ny)) return false;
@@ -238,6 +243,7 @@ bool MappedInputManager::wasScreenLongPress(int& x, int& y) const {
 }
 
 bool MappedInputManager::isScreenTouchHeld(int& x, int& y) const {
+  if (inputBlocked) return false;
   // Live contact position while the finger is down (no tap-slop gate) — drag tracking.
   float nx = 0.0f;
   float ny = 0.0f;
@@ -287,6 +293,7 @@ MappedInputManager::RowTouch MappedInputManager::colTouch(int& col, const int le
 }
 
 bool MappedInputManager::decodeSwipe(int& sx, int& sy, int& ex, int& ey) const {
+  if (inputBlocked) return false;
   float nxs = 0.0f;
   float nys = 0.0f;
   float nxe = 0.0f;
@@ -334,6 +341,7 @@ bool MappedInputManager::wasEdgeSwipe(const freeink::ui::ScreenEdge edge) const 
 }
 
 bool MappedInputManager::wasBackGesture() const {
+  if (inputBlocked) return false;
   // Tap on the header back button (rect recorded by BaseTheme::drawHeader;
   // empty on screens without one). Folded into Button::Back alongside the
   // swipe so every activity's existing Back handling picks it up.
@@ -363,7 +371,12 @@ bool MappedInputManager::wasMenuGesture() const { return wasTopEdgeDownSwipe(); 
 bool MappedInputManager::wasReaderMenuSwipeUp() const { return gpio.hasHomeKey() && wasBottomEdgeUpSwipe(); }
 
 bool MappedInputManager::wasHomeGesture() const {
+  if (inputBlocked) return false;
   return gpio.hasHomeKey() ? homeAction == HomeButtonAction::Home : wasBottomEdgeUpSwipe();
+}
+
+bool MappedInputManager::wasHomeKeyHold() const {
+  return !inputBlocked && gpio.hasHomeKey() && gpio.wasHomeKeyLongPressed();
 }
 
 bool MappedInputManager::wasLightPanelGesture() const {
@@ -373,6 +386,7 @@ bool MappedInputManager::wasLightPanelGesture() const {
 
 #if FREEINK_CAP_TOUCH
 bool MappedInputManager::wasPowerConfirmClick() const {
+  if (inputBlocked) return false;
   if (!gpio.hasTouch() || SETTINGS.shortPwrBtn != CrossPointSettings::SHORT_PWRBTN::PWR_CONFIRM) return false;
   // Wait out the X4 Pro's frontlight double-click window before treating its
   // first release as Confirm. With the shortcut disabled, and on other touch
@@ -383,7 +397,8 @@ bool MappedInputManager::wasPowerConfirmClick() const {
 #endif
 
 bool MappedInputManager::injectRemoteClick(const RemoteButton button) {
-  if (gpio.wasAnyPressed() || gpio.wasAnyReleased() || isPressed(Button::Confirm) || isPressed(Button::Back))
+  if ((!inputBlocked && (gpio.wasAnyPressed() || gpio.wasAnyReleased())) || isPressed(Button::Confirm) ||
+      isPressed(Button::Back))
     return false;
   return remoteInput.click(button);
 }
@@ -394,6 +409,7 @@ bool MappedInputManager::wasPressed(const Button button) const {
   if ((button == Button::NavNext || button == Button::Right) && remoteInput.button == RemoteButton::Next) return true;
   if ((button == Button::NavPrevious || button == Button::Left) && remoteInput.button == RemoteButton::Previous)
     return true;
+  if (inputBlocked) return false;
   if (button == Button::Confirm && homeAction == HomeButtonAction::Confirm) return true;
   if (button == Button::Back && wasBackGesture()) return true;
 #if FREEINK_CAP_TOUCH
@@ -408,6 +424,7 @@ bool MappedInputManager::wasReleased(const Button button) const {
   if ((button == Button::NavNext || button == Button::Right) && remoteInput.button == RemoteButton::Next) return true;
   if ((button == Button::NavPrevious || button == Button::Left) && remoteInput.button == RemoteButton::Previous)
     return true;
+  if (inputBlocked) return false;
   if (button == Button::Confirm && homeAction == HomeButtonAction::Confirm) return true;
   if (button == Button::Back && wasBackGesture()) return true;
 #if FREEINK_CAP_TOUCH
@@ -445,6 +462,10 @@ bool MappedInputManager::consumeSuppressedRelease() const {
 }
 
 bool MappedInputManager::isPressed(const Button button) const { return mapButton(button, &HalGPIO::isPressed); }
+
+bool MappedInputManager::wasAnyPressed() const { return !inputBlocked && gpio.wasAnyPressed(); }
+
+bool MappedInputManager::wasAnyReleased() const { return !inputBlocked && gpio.wasAnyReleased(); }
 
 unsigned long MappedInputManager::getHeldTime() const {
   // A mapped action has its own meaning, independent of the contact duration.

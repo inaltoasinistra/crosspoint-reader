@@ -85,6 +85,9 @@ class HalGPIO {
   // hardware (ADC ladder off its idle rail, or the power GPIO asserted), without
   // going through the debounced state. Cheap enough to call every few ms.
   bool rawInputActive();
+  // Electrical side-button levels before the DigitalTwoButton click/hold mapping.
+  // Reports false levels on other input styles.
+  void readPhysicalSideButtons(bool& up, bool& down) const;
   bool hasTouch() const;
   // Capacitive Home key reported by the touch controller (X4 Pro). The tap
   // event fires on release and excludes a long hold.

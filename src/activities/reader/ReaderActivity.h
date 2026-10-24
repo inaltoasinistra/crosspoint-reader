@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ButtonChord.h>
+
 #include <atomic>
 #include <memory>
 #include <string>
@@ -24,6 +26,8 @@ class ReaderActivity : public Activity {
   bool bookRemembered = false;
   void markPageRendered() { pageRendered.store(true, std::memory_order_release); }
   void rememberBookOnceRendered();
+  // Last side-button press turn, reversed if that button turns out to start a Power chord.
+  ChordTurn sidePressTurn;
 
   explicit ReaderActivity(const char* name, GfxRenderer& renderer, MappedInputManager& mappedInput,
                           std::string bookPath, bool allowFastInitialRefresh);
@@ -67,6 +71,11 @@ class ReaderActivity : public Activity {
   bool handleEndOfBookMenu(bool suppressConfirmRelease = false);
   bool handleEndOfBookPageTurn(bool prevTriggered, bool nextTriggered);
   void clearEndOfBookOptionsIfNeeded();
+  void recordTurn(bool forward, bool fromSidePress);
+  virtual void captureChordTurnStart() {}
+  virtual bool restoreChordTurnStart(bool forward) { return pageTurn(!forward); }
+  // Drop a side-press turn that is queued but not applied yet.
+  virtual void cancelPendingSidePressTurn() {}
   void disableFastInitialRefresh();
   void notePageTurn(bool forward, bool succeeded);
   void flushReaderSession();
@@ -86,4 +95,5 @@ class ReaderActivity : public Activity {
   bool isReaderActivity() const final { return true; }
   bool acceptsRemoteInput() const final { return pageRendered.load(std::memory_order_acquire); }
   bool handleForcedRefresh() final;
+  bool revertChordPageTurn(bool scheduleUpdate) final;
 };

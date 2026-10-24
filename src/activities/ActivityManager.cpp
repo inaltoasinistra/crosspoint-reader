@@ -413,6 +413,19 @@ bool ActivityManager::isForegroundReader() const {
   return pendingAction == PendingAction::None && currentActivity && currentActivity->isReaderActivity();
 }
 
+bool ActivityManager::acceptsControlsLock() const {
+  return currentActivity && currentActivity->name != "Boot" && currentActivity->name != "Sleep" &&
+         !currentActivity->requiresExclusiveStorageLoop();
+}
+
+bool ActivityManager::revertChordPageTurn(const bool scheduleUpdate) {
+  return currentActivity && currentActivity->revertChordPageTurn(scheduleUpdate);
+}
+
+void ActivityManager::onControlsLocked() {
+  if (currentActivity) currentActivity->onControlsLocked();
+}
+
 bool ActivityManager::isRemoteReaderContext() const {
   return pendingAction == PendingAction::None && currentActivity && currentActivity->acceptsRemoteInput();
 }

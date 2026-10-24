@@ -121,6 +121,9 @@ class ActivityManager {
   bool remoteTurn(bool forward, bool chapter);
   // A remote button mapped to the reader menu (true) or to a new clipping (false).
   bool remoteShortcut(bool readerMenu);
+  bool acceptsControlsLock() const;
+  bool revertChordPageTurn(bool scheduleUpdate);
+  void onControlsLocked();
   bool handleForcedRefresh();
   bool skipLoopDelay() const;
   ScreenshotInfo getScreenshotInfo() const;

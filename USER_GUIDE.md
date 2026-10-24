@@ -69,6 +69,8 @@ Button layout can be customized in the **[Controls Settings](#363-controls)**.
 ### Taking a Screenshot
 
 When the Power button and the lower side button (Side Down) are pressed at the same time, it will take a screenshot and save it in the folder `screenshots/`.
+If Side Down turned a page on press just before Power completed the combination, that page turn is reversed first,
+so the screenshot shows the page you were on.
 
 Alternatively, while reading a book, press the **Confirm** button to open the reader menu and select **Take screenshot**.
 
@@ -326,6 +328,8 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "Links and Footnotes" - A short press in reading mode opens link selection. If the page has only one link, it opens directly. After following a link, a short press returns to the previous location.
   - "Refresh" - A short press triggers a manual full-screen refresh, useful for clearing ghosting
 - **Quick return from links**: Controls whether a short press of the power button acts as Back after following a link or footnote.
+- **Lock Controls on Wake**: When on, booting or waking from sleep starts with local controls locked
+  (see [Controls Lock](#controls-lock)). Default off.
 
 #### 3.6.4 System
 
@@ -651,6 +655,29 @@ Auto Page Turn automatically advances pages at a set interval, useful for hands-
 ### Tilt Page Turn (X3 only)
 
 On the **Xteink X3**, the gyroscope can be used to turn pages by tilting the device. This feature is available in the Controls settings.
+
+### Controls Lock
+
+Press **Power** and the side **Up** button together to lock local controls on Home, in menus, or while reading.
+Press both again to unlock. Bluetooth controls and timed page turns remain available while locked.
+On **Paper Mono**, hold both side buttons together for **2 seconds** instead. Release both before repeating the
+gesture. On Home and while reading, this combination locks/unlocks instead of sleeping; releasing early cancels it
+without turning a page or opening a menu.
+
+While locked:
+- page buttons, touch, gyroscope tilt turns, most short Power actions and the screenshot combination are ignored;
+- Bluetooth controls, including navigation and reader shortcuts, remain available; timed automatic turns continue;
+- a long press of Power still puts the device to sleep;
+- on Paper Mono, a click of the physical Power button still sleeps with Short Power Button Press set to Ignore or Sleep;
+- on X4 Pro, a short Power click still sleeps when Short Power Button Click is set to Sleep;
+- presses do not reset the sleep timer, so a button stuck down in a bag cannot keep the device awake.
+
+When pages turn on press (**Long-press button behavior** set to "Off"), pressing Up a moment before Power may turn a
+page; that page turn is reversed when the lock toggles.
+
+The lock remains active across Home, menus and books; Boot, Sleep and the exclusive USB-drive handoff are not blocked.
+To start locked after boot or wake, turn on **Lock Controls on Wake** in the Controls settings. An internal restart
+after syncing progress does not re-lock the controls.
 
 ### Links and footnotes
 
